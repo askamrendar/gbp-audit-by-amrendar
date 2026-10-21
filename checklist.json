@@ -1,0 +1,422 @@
+[
+  {
+    "id": "A01",
+    "check": "Operating branch",
+    "evidence_required": "Business evidence + signage/owner confirmation",
+    "acceptance": "A real eligible operation exists at the claimed location; distinguish storefront, SAB and hybrid."
+  },
+  {
+    "id": "A02",
+    "check": "Staffing and access",
+    "evidence_required": "Owner attestation + customer-facing information",
+    "acceptance": "Staffing, customer access and signage meet applicable location rules; uncertainty remains Unknown."
+  },
+  {
+    "id": "A03",
+    "check": "Name accuracy",
+    "evidence_required": "Profile + real-world branding",
+    "acceptance": "Displayed name matches supported branding; no ranking-only service/location additions."
+  },
+  {
+    "id": "A04",
+    "check": "Chain consistency",
+    "evidence_required": "All branch profiles + operation types",
+    "acceptance": "Names and core categories are consistent for equivalent operations, with documented real differences."
+  },
+  {
+    "id": "A05",
+    "check": "Address accuracy",
+    "evidence_required": "Profile + authoritative branch facts",
+    "acceptance": "Street/building/floor/unit and postal details identify the actual branch."
+  },
+  {
+    "id": "A06",
+    "check": "Hidden SAB address",
+    "evidence_required": "Business model + profile",
+    "acceptance": "Address display matches business eligibility and privacy requirements."
+  },
+  {
+    "id": "A07",
+    "check": "Pin and entrance",
+    "evidence_required": "Map + entrance evidence",
+    "acceptance": "Pin/arrival instructions lead to the correct premises or entrance."
+  },
+  {
+    "id": "A08",
+    "check": "Duplicate entities",
+    "evidence_required": "Branded/address/phone searches",
+    "acceptance": "Suspected duplicate, former and closed listings are recorded and identity is resolved before proposing action."
+  },
+  {
+    "id": "A09",
+    "check": "Co-located exceptions",
+    "evidence_required": "Department/practitioner facts + current policy",
+    "acceptance": "Separate profiles meet their specific exception; do not assume every co-location is duplicate."
+  },
+  {
+    "id": "A10",
+    "check": "Status and ownership",
+    "evidence_required": "Owner dashboard/export",
+    "acceptance": "Verification, suspension, pending edits and access roles checked privately; public inference is insufficient."
+  },
+  {
+    "id": "B01",
+    "check": "Primary category",
+    "evidence_required": "Direct profile/owner evidence",
+    "acceptance": "Most appropriate available category describes the actual core business."
+  },
+  {
+    "id": "B02",
+    "check": "Additional categories",
+    "evidence_required": "Owner export or observed data",
+    "acceptance": "Categories match real offerings; do not infer unseen categories or add all competitor categories."
+  },
+  {
+    "id": "B03",
+    "check": "Regular hours",
+    "evidence_required": "Profile + confirmed operating hours",
+    "acceptance": "Customer-facing hours reflect this branch and applicable industry exceptions."
+  },
+  {
+    "id": "B04",
+    "check": "Special/more hours",
+    "evidence_required": "Upcoming calendar + branch confirmation",
+    "acceptance": "Applicable holiday, seasonal and service-specific hours are accurate."
+  },
+  {
+    "id": "B05",
+    "check": "Phone routing",
+    "evidence_required": "Published number + authorized test/confirmation",
+    "acceptance": "Number is controlled by the business and routes accurately to this branch or clearly routed service."
+  },
+  {
+    "id": "B06",
+    "check": "Website destination",
+    "evidence_required": "GBP link + redirect trail",
+    "acceptance": "Link lands on a working, relevant branch destination without wrong-store redirects."
+  },
+  {
+    "id": "B07",
+    "check": "Booking/order/menu links",
+    "evidence_required": "Available feature + destination test",
+    "acceptance": "Applicable action links preserve branch choice and lead to the correct offer or booking."
+  },
+  {
+    "id": "B08",
+    "check": "Description",
+    "evidence_required": "Visible description",
+    "acceptance": "Accurate useful description without prohibited content, unsupported claims or keyword stuffing."
+  },
+  {
+    "id": "B09",
+    "check": "Services/products/menu",
+    "evidence_required": "Branch offering list + profile",
+    "acceptance": "Applicable listings are accurate and available here; missing feature is not an automatic failure."
+  },
+  {
+    "id": "B10",
+    "check": "Attributes/accessibility",
+    "evidence_required": "Available fields + business confirmation",
+    "acceptance": "Relevant attributes are factual and help customers plan a visit."
+  },
+  {
+    "id": "B11",
+    "check": "Photos and arrival proof",
+    "evidence_required": "Visible media sample",
+    "acceptance": "Authentic current premises/entrance/interior/service imagery helps identify this store; no count minimum."
+  },
+  {
+    "id": "B12",
+    "check": "Updates/offers",
+    "evidence_required": "Visible posts + offer terms",
+    "acceptance": "Any visible offers and updates are accurate and valid; absence alone is not a ranking failure."
+  },
+  {
+    "id": "B13",
+    "check": "Questions/contact features",
+    "evidence_required": "Current local interface + official help",
+    "acceptance": "Available customer questions/contact paths are checked; deprecated/unavailable features are excluded."
+  },
+  {
+    "id": "C01",
+    "check": "Review baseline",
+    "evidence_required": "Dated profile capture",
+    "acceptance": "Count and rating are recorded accurately without universal pass cutoffs."
+  },
+  {
+    "id": "C02",
+    "check": "Review recency",
+    "evidence_required": "Review date sample",
+    "acceptance": "Recent activity is reported over disclosed windows; partial history is labeled a sample."
+  },
+  {
+    "id": "C03",
+    "check": "Response handling",
+    "evidence_required": "Consistent review sample",
+    "acceptance": "Useful respectful replies address material concerns; sample response denominator is explicit."
+  },
+  {
+    "id": "C04",
+    "check": "Operational themes",
+    "evidence_required": "Recent positive/negative sample",
+    "acceptance": "Recurring branch-specific problems are identified and routed to operations."
+  },
+  {
+    "id": "C05",
+    "check": "Acquisition process",
+    "evidence_required": "Owner process evidence",
+    "acceptance": "Requests are voluntary and neutral; no incentives, gating, fake reviews or pressured revisions."
+  },
+  {
+    "id": "C06",
+    "check": "Branch attribution",
+    "evidence_required": "Review request URL + receipt/customer process",
+    "acceptance": "Requests lead to the store the customer used; reviews are not pooled or reassigned artificially."
+  },
+  {
+    "id": "C07",
+    "check": "Competitor cohort",
+    "evidence_required": "Observed query + geography + category",
+    "acceptance": "Comparable independent businesses selected per branch/intent; rationale and limitations recorded."
+  },
+  {
+    "id": "C08",
+    "check": "Raw benchmark matrix",
+    "evidence_required": "Equivalent sources/windows",
+    "acceptance": "Reviews, categories, hours, services and media observations shown without fabricated values or causal claims."
+  },
+  {
+    "id": "D01",
+    "check": "Query coverage",
+    "evidence_required": "Service/intent/language inventory",
+    "acceptance": "Branded, generic, service and neighborhood demand is represented using actual business offerings."
+  },
+  {
+    "id": "D02",
+    "check": "Geographic coverage",
+    "evidence_required": "Documented origin set",
+    "acceptance": "Every branch, meaningful overlap zones and customer/commercial nodes are represented."
+  },
+  {
+    "id": "D03",
+    "check": "Collection controls",
+    "evidence_required": "Rank observation metadata",
+    "acceptance": "Coordinates, device, language, time, surface, depth and sponsored exclusions are documented."
+  },
+  {
+    "id": "D04",
+    "check": "Exact entity matching",
+    "evidence_required": "Place ID/CID or verified entity evidence",
+    "acceptance": "Each result maps to the correct branch; identical names are not conflated."
+  },
+  {
+    "id": "D05",
+    "check": "Observed positions",
+    "evidence_required": "Local Pack/Maps captures or valid provider export",
+    "acceptance": "Measured positions are surface-specific; Places discovery order is not reported as pack rank."
+  },
+  {
+    "id": "D06",
+    "check": "Branch visibility",
+    "evidence_required": "Same query-origin test set",
+    "acceptance": "Top-three/observed-depth coverage computed using known valid observations."
+  },
+  {
+    "id": "D07",
+    "check": "Brand coverage",
+    "evidence_required": "Deduplicated query-origin tests",
+    "acceptance": "Any-owned-branch visibility reported without summing siblings into double-counted coverage."
+  },
+  {
+    "id": "D08",
+    "check": "Overlap diagnosis",
+    "evidence_required": "Repeat visibility + URL/routing evidence",
+    "acceptance": "Overlap distinguished from harmful wrong-branch routing or organic page conflict; filtering is a hypothesis unless evidenced."
+  },
+  {
+    "id": "D09",
+    "check": "Repeatability",
+    "evidence_required": "Compatible repeat captures",
+    "acceptance": "Changes compared using consistent origin/query/surface/depth and noted external/context changes."
+  },
+  {
+    "id": "E01",
+    "check": "Branch destination register",
+    "evidence_required": "Roster + website crawl",
+    "acceptance": "Each branch maps to the intended canonical location page; no unrelated home/branch destination."
+  },
+  {
+    "id": "E02",
+    "check": "City hub/locator",
+    "evidence_required": "Navigation + crawl",
+    "acceptance": "Customers and crawlers can discover and compare actual branches through usable links."
+  },
+  {
+    "id": "E03",
+    "check": "Indexability",
+    "evidence_required": "HTTP/rendered HTML/robots/canonical",
+    "acceptance": "Priority location pages are accessible and intended for indexing; distinguish crawl blocks from noindex."
+  },
+  {
+    "id": "E04",
+    "check": "Index evidence",
+    "evidence_required": "Search Console if available",
+    "acceptance": "Actual indexing inspected with owner tools; site-search absence alone is not conclusive."
+  },
+  {
+    "id": "E05",
+    "check": "Canonical and redirects",
+    "evidence_required": "HTML + redirect checks",
+    "acceptance": "Branch pages do not accidentally canonicalize or redirect to siblings or the city hub."
+  },
+  {
+    "id": "E06",
+    "check": "Visible branch facts",
+    "evidence_required": "Rendered page + branch record",
+    "acceptance": "Name, address/contact policy, phone, hours and services identify the correct branch."
+  },
+  {
+    "id": "E07",
+    "check": "Unique customer value",
+    "evidence_required": "Branch facts and page comparison",
+    "acceptance": "Real entrance/parking/access/team/availability details help choose a store; no arbitrary uniqueness percentage."
+  },
+  {
+    "id": "E08",
+    "check": "Titles and headings",
+    "evidence_required": "Rendered page",
+    "acceptance": "Clear accurate service/branch context without keyword stuffing or forced word counts."
+  },
+  {
+    "id": "E09",
+    "check": "Internal linking",
+    "evidence_required": "Crawl + navigation",
+    "acceptance": "City hub, services and branch pages link usefully; no orphan stores or prescribed anchor ratios."
+  },
+  {
+    "id": "E10",
+    "check": "Doorway risk",
+    "evidence_required": "Site purpose + page set",
+    "acceptance": "Pages serve distinct customer needs rather than low-value query variants funneling to the same destination."
+  },
+  {
+    "id": "E11",
+    "check": "Mobile conversion",
+    "evidence_required": "Rendered mobile journey",
+    "acceptance": "Call, directions, forms, booking and branch selector work and keep the intended store."
+  },
+  {
+    "id": "E12",
+    "check": "Performance/accessibility",
+    "evidence_required": "Field data + lab checks as available",
+    "acceptance": "Real bottlenecks are documented; URL/origin data and lab/field results remain distinct."
+  },
+  {
+    "id": "E13",
+    "check": "LocalBusiness entities",
+    "evidence_required": "JSON-LD + visible facts",
+    "acceptance": "Each actual branch has an appropriate distinct entity/URL; no fabricated premises or identifiers."
+  },
+  {
+    "id": "E14",
+    "check": "Schema validation",
+    "evidence_required": "Parser + vocabulary validator + Google test",
+    "acceptance": "Syntax, semantic accuracy and feature eligibility reported separately; unsupported types are not parse failures."
+  },
+  {
+    "id": "E15",
+    "check": "Review schema eligibility",
+    "evidence_required": "Existing markup + current Google documentation",
+    "acceptance": "No self-serving review-star promises or copied third-party aggregate stars treated as eligible."
+  },
+  {
+    "id": "E16",
+    "check": "Language and geography",
+    "evidence_required": "Customer languages + pages",
+    "acceptance": "Relevant local-language content is useful; hreflang checked only when alternate-language/region pages exist."
+  },
+  {
+    "id": "F01",
+    "check": "Directory selection",
+    "evidence_required": "Country/category/customer relevance",
+    "acceptance": "Audit relevant maps, local and industry platforms; do not universally require US directories."
+  },
+  {
+    "id": "F02",
+    "check": "Semantic NAP match",
+    "evidence_required": "Listing vs canonical branch record",
+    "acceptance": "Normalize phone/address formatting while preserving unit, building and routing differences."
+  },
+  {
+    "id": "F03",
+    "check": "Directory destination",
+    "evidence_required": "Citation phone/URL/profile",
+    "acceptance": "Listing refers to the correct branch; central business data is not substituted indiscriminately."
+  },
+  {
+    "id": "F04",
+    "check": "Old/duplicate citations",
+    "evidence_required": "Historical address/name/phone lookup",
+    "acceptance": "Material former or duplicate identities documented with correction path."
+  },
+  {
+    "id": "F05",
+    "check": "Real local authority",
+    "evidence_required": "Relevant local links/mentions",
+    "acceptance": "Assess genuine community, trade and editorial relevance; avoid bulk listing/link quotas."
+  },
+  {
+    "id": "G01",
+    "check": "Branch identifiers",
+    "evidence_required": "Roster + reporting configuration",
+    "acceptance": "Stable IDs join GBP, page, analytics and CRM without changing public names."
+  },
+  {
+    "id": "G02",
+    "check": "Tagged links",
+    "evidence_required": "GBP links + analytics rules",
+    "acceptance": "Branch-specific tracking works and clean canonical destinations are retained."
+  },
+  {
+    "id": "G03",
+    "check": "Lead attribution",
+    "evidence_required": "Authorized test + analytics/CRM evidence",
+    "acceptance": "Forms/bookings/calls preserve branch and source; no personal data in tracking URLs."
+  },
+  {
+    "id": "G04",
+    "check": "Outcome definitions",
+    "evidence_required": "GBP/analytics/CRM definitions",
+    "acceptance": "Clicks, call interactions, qualified leads, completed bookings and visits remain distinct."
+  },
+  {
+    "id": "G05",
+    "check": "Comparable periods",
+    "evidence_required": "Dated exports",
+    "acceptance": "Compare matched windows and seasonality; record missing data and changes in definitions."
+  },
+  {
+    "id": "G06",
+    "check": "Access stewardship",
+    "evidence_required": "Owner access review",
+    "acceptance": "Business retains appropriate control; changes have an assigned owner and recovery evidence."
+  },
+  {
+    "id": "G07",
+    "check": "Change and acceptance log",
+    "evidence_required": "Dated baseline + action register",
+    "acceptance": "Each proposed/final change has branch scope, responsible role and observable acceptance check."
+  },
+  {
+    "id": "H01",
+    "check": "Observed AI answers",
+    "evidence_required": "Direct answer capture + exact prompt/context",
+    "acceptance": "Record actual brand/branch mentions, cited URLs and wrong-store facts without inferring answers from web search."
+  },
+  {
+    "id": "H02",
+    "check": "Access and facts",
+    "evidence_required": "Official crawler guidance + public pages",
+    "acceptance": "Audit discoverability and factual clarity; training preferences are not automatically search eligibility failures."
+  }
+]

@@ -1,0 +1,9 @@
+.venv/
+.audit-browser/
+.test-browser/
+__pycache__/
+*.pyc
+runs/
+.env
+.DS_Store
+test-output/
