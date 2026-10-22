@@ -65,3 +65,9 @@ uvicorn service:app --host 127.0.0.1 --port 8000 --workers 1
 ```
 
 The service's API tests cover session isolation, queue limits, request consent, bad uploads, file downloads, restart recovery, retention and report rebuilding. Container build/host-specific browser behavior must also be verified on the selected provider. No cloud deployment has been performed.
+
+## Render deployment
+
+A `render.yaml` Blueprint defines one Docker web service in Singapore, the 1 CPU / 2 GB plan, a 1 GB persistent disk, `/api/health` checks and automatic deployment after GitHub checks pass. Creating it provisions paid resources; review the current price and approve it in Render first. The proposed service stores private reports under `/data/audits`. Use one instance and one worker.
+
+After deployment, verify the actual Render HTTPS address (it may differ from the proposed name), test `/api/health`, then set `docs/config.js` to that address followed by `/api` with `hosted: true`. Keep Pages in local mode until the service is healthy. Test automatic connection, a real audit, PPTX/ZIP downloads and recovery through the Pages address before calling the deployment complete.

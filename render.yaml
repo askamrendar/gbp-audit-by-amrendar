@@ -1,0 +1,27 @@
+# Production proposal: creating this Blueprint starts paid Render resources.
+# Review/approve the plan in Render before deployment.
+services:
+  - type: web
+    name: gbp-audit-by-amrendar
+    runtime: docker
+    plan: 1c-2g
+    region: singapore
+    branch: main
+    dockerfilePath: ./Dockerfile
+    dockerContext: .
+    healthCheckPath: /api/health
+    numInstances: 1
+    autoDeployTrigger: checksPass
+    disk:
+      name: gbp-audit-reports
+      mountPath: /data
+      sizeGB: 1
+    envVars:
+      - key: AUDIT_DATA_DIR
+        value: /data/audits
+      - key: AUDIT_ALLOWED_ORIGINS
+        value: https://askamrendar.github.io
+      - key: AUDIT_RETENTION_HOURS
+        value: '24'
+      - key: AUDIT_MAX_STORES
+        value: '10'
