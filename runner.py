@@ -61,7 +61,7 @@ class Handler(BaseHTTPRequestHandler):
    types={'.html':'text/html; charset=utf-8','.js':'text/javascript','.css':'text/css','.csv':'text/csv'}
    self.headers_(200,types.get(f.suffix,'text/plain'));self.end_headers();self.wfile.write(f.read_bytes());return
   if not self.auth():return self.json_(403,{'error':'Connect using the pairing code shown by your local runner'})
-  if path=='/health':return self.json_(200,{'name':'GBP Audit by Amrendar','version':'1.1','ready':True})
+  if path=='/health':return self.json_(200,{'name':'GBP Audit by Amrendar','version':'1.2','ready':True})
   parts=path.strip('/').split('/')
   if len(parts)>=2 and parts[0]=='jobs' and parts[1] in JOBS:
    job=JOBS[parts[1]]
@@ -94,11 +94,30 @@ class Handler(BaseHTTPRequestHandler):
    else:rows=body.get('rows')
    rows=validate_rows(rows);media=int(body.get('media_limit',10))
    if not 0<=media<=50:raise ValueError('Media sample must be 0–50')
-   brand=body.get('brand') or {};brand={k:str(brand.get(k,''))[:100] for k in ['client','color']}
+   brand=body.get('brand') or {};brand={k:str(brand.get(k,''))[:100] for k in ['client','color','accent','agency']}
    if brand['color'] and not audit.re.fullmatch('#[0-9a-fA-F]{6}',brand['color']):raise ValueError('Use a hex brand colour')
-   jid=secrets.token_hex(12);JOBS[jid]={'id':jid,'status':'queued','messages':[],'files':[]};POOL.submit(work,jid,rows,media,brand)
+   if brand['accent'] and not audit.re.fullmatch('#[0-9a-fA-F]{6}',brand['accent']):raise ValueError('Use a hex accent colour')
+   logo=body.get('logo')
+   logo_bytes=None
+   if logo:
+    import io
+    from PIL import Image
+    logo_bytes=base64.b64decode(logo,validate=True)
+    if len(logo_bytes)>1000000:raise ValueError('Logo must be below 1 MB')
+    try:
+     im=Image.open(io.BytesIO(logo_bytes))
+    except Exception as exc:raise ValueError('Invalid or oversized logo image') from exc
+    with im:
+     if im.format not in ['PNG','JPEG'] or im.width*im.height>16000000:raise ValueError('Use a PNG or JPEG logo below 16 megapixels')
+     im.verify()
+   jid=secrets.token_hex(12)
+   if logo_bytes:
+    local=ROOT/jid/'branding';local.mkdir(parents=True);logo_path=local/'agency-logo.png'
+    with Image.open(io.BytesIO(logo_bytes)) as im:im.convert('RGBA').save(logo_path,'PNG')
+    brand['logo_path']=str(logo_path)
+   JOBS[jid]={'id':jid,'status':'queued','messages':[],'files':[]};POOL.submit(work,jid,rows,media,brand)
    self.json_(202,{'id':jid})
-  except (ValueError,TypeError,KeyError,StopIteration,zipfile.BadZipFile) as e:self.json_(400,{'error':str(e) or 'Invalid upload'})
+  except (ValueError,TypeError,KeyError,StopIteration,zipfile.BadZipFile,OSError) as e:self.json_(400,{'error':str(e) or 'Invalid upload'})
 
 def main():
  global PORT

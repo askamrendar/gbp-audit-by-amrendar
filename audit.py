@@ -160,6 +160,12 @@ def gallery(page,folder,limit):
  except Exception as exc:result['blocker']='Gallery collection unavailable: '+type(exc).__name__
  return result
 
+def parse_photo_label(label):
+ """Only a labelled displayed total; never scrape arbitrary numbers or sample length."""
+ m=re.fullmatch(r'([0-9]+(?:,[0-9]{3})*)\s+(photos?(?:\s*(?:&|and)\s*videos?)?|media)',str(label).strip(),re.I)
+ if not m:return None
+ return {'raw_label':label,'total':int(m[1].replace(',','')),'label_kind':'media' if re.search(r'video|media',m[2],re.I) else 'photos'}
+
 def profile(context,url,folder,media_limit,expected_id=None,expected_name='',expected_address=''):
  page=context.new_page();result={'requested_url':url,'attempted_at':now(),'errors':[]}
  try:
@@ -186,6 +192,15 @@ def profile(context,url,folder,media_limit,expected_id=None,expected_name='',exp
      if -90<=lat<=90 and -180<=lon<=180:result['coordinates']={'latitude':lat,'longitude':lon,'source':'profile_directions_destination','source_url':href};break
   category=page.locator('button[jsaction*="category"]')
   result['category']=category.first.inner_text() if category.count() else None
+  result['photo_count_observation']={'total':None,'collection_state':'not_exposed','observed_at':now(),'evidence':result.get('screenshot')}
+  for label in page.get_by_role('button').evaluate_all('(els)=>els.map(e=>e.getAttribute("aria-label")||e.innerText)'):
+   count=parse_photo_label(label)
+   if count:result['photo_count_observation']=dict(count,collection_state='collected',observed_at=now(),evidence=result.get('screenshot'),entity_id=result.get('entity_id'));break
+  stars=page.locator('[role="img"][aria-label*="stars"]')
+  if stars.count():
+   label=stars.first.get_attribute('aria-label') or '';match=re.fullmatch(r'([0-5](?:\.\d+)?) stars',label)
+   if match:result['rating']=float(match[1])
+
   reviews=page.get_by_role('button',name=re.compile(r'[\d,]+ reviews'))
   result['review_count_label']=reviews.first.get_attribute('aria-label') if reviews.count() else None
   website_link=page.locator('a[data-item-id="authority"]')
@@ -213,6 +228,13 @@ def profile(context,url,folder,media_limit,expected_id=None,expected_name='',exp
   if posts.count():
    try:posts.click();result['post_evidence']=capture(page,folder,'post');page.goto(result['url'],wait_until='domcontentloaded');settle(page)
    except Exception:result['errors'].append('Post detail unavailable')
+  result['whatsapp_links']=page.locator('a[href*="wa.me/"],a[href*="whatsapp.com/"]').evaluate_all('(els)=>els.map(e=>e.href)')
+  if result.get('website_link_state')=='missing':
+   missing=page.get_by_role('button',name='Add website',exact=True)
+   if missing.count():
+    try:missing.first.scroll_into_view_if_needed();result['details_evidence']=capture(page,folder,'profile-details')
+    except Exception:result['errors'].append('Website gap screenshot unavailable')
+  result['attribute_observation']={'body':result.get('about_evidence',{}).get('body'),'state':'captured_needs_review' if result.get('about_evidence') else 'not_exposed','accuracy':'Operational truth not confirmed'}
   if media_limit:result['gallery']=gallery(page,folder,media_limit)
   result['resolved_url']=page.url
   if result['website']:
@@ -303,10 +325,11 @@ def assess(p):
   for c in checks:c['finding']='Collection blocked: '+p['blocker']
  return checks
 
-from report import export_ppt,form_values,FORM
+from report import export_ppt,export_portfolio,form_values,FORM,photo_count
 
 def run(rows,out,profile_dir,headless=False,executable=None,media_limit=10,channel='chrome',log=print,brand=None):
  from playwright.sync_api import sync_playwright
+ reports=[]
  out=pathlib.Path(out).resolve();out.mkdir(parents=True,exist_ok=True);profile_dir=pathlib.Path(profile_dir).resolve()
  normal=pathlib.Path.home()/'Library/Application Support/Google/Chrome'
  if profile_dir==normal or normal in profile_dir.parents:raise ValueError('Use the separate audit browser directory, not your regular Chrome profile')
@@ -363,7 +386,17 @@ def run(rows,out,profile_dir,headless=False,executable=None,media_limit=10,chann
      w=csv.writer(f);w.writerow(['entity','check_id','check','status','finding','next_input'])
      for p in data['profiles']:
       for c in p['checks']:w.writerow([p.get('name'),c['id'],c['check'],c['status'],c['finding'],c['next_input']])
+    with (folder/'photo-comparison.csv').open('w',newline='',encoding='utf-8') as f:
+     writer=csv.writer(f);writer.writerow(['entity','entity_id','displayed_total','label_kind','observed_at','evidence','sample_items'])
+     for entity in data['profiles']:
+      observation=entity.get('photo_count_observation') or {};writer.writerow([entity.get('name'),entity.get('entity_id'),photo_count(entity),observation.get('label_kind','unknown'),observation.get('observed_at'),observation.get('evidence'),len(entity.get('gallery',{}).get('items',[]))])
+    reports.append(data)
     export_ppt(data,folder/'audit-draft.pptx');log('PowerPoint created with captured GBP and ranking screenshots: '+str(folder))
+   groups={}
+   for data in reports:groups.setdefault((data['input']['keyword'],data.get('ranking',{}).get('method','exploratory_maps_area_view')),[]).append(data)
+   for (keyword,method),group in groups.items():
+    if len(group)>1:
+     output=out/('all-stores-'+hashlib.sha256((keyword+method).encode()).hexdigest()[:8]+'.pptx');export_portfolio(group,output);log('Combined rank-ordered report saved: '+str(output))
   finally:context.close()
  return str(out)
 

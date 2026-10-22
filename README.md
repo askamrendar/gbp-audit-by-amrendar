@@ -27,12 +27,13 @@ For each store/keyword: resolve the target profile, capture the profile view, co
 
 Outputs per store:
 
-- 11-slide editable PowerPoint: overview, authentic GBP/result screenshots, local comparison, findings, three form-comparison slides, media gaps, two linked-page comparison slides and prioritised action plan.
+- Editable PowerPoint: cover and summary, two pages per store (screenshots with specific findings, then competitor comparison), one detailed pilot checklist, combined improvement work and a 30-day plan. A single-store report has seven slides. Bulk reports group matching keywords and methods, ordering measured positions first. Additional summary pages are added above eight stores.
+- Photo comparison CSV separates the displayed public total from the number of sampled gallery items. Unexposed totals stay unknown.
 - 70 stable master checks per collected entity in CSV, with status, evidence-based finding and next input.
 - JSON, screenshots and visible-page text, including website headings, canonical, JSON-LD syntax, iframe/link inventory and sampled media IDs/labels.
 - One downloadable archive containing all local evidence and reports for the job.
 
-Client name and brand colour are optional inputs before starting. Reports have no client-specific footer or bundled client screenshots.
+Client name, agency name, primary/accent colours and a PNG/JPEG agency logo are optional inputs before starting. Logos stay in the local job folder. Reports have no client-specific footer or bundled client screenshots.
 
 ## Honest coverage
 
@@ -54,7 +55,7 @@ CSV (UTF-8) or XLSX, first worksheet, one row per store/keyword. Required:
 | `maps_url` | Long/short HTTPS Google Maps profile or specific business search link |
 | `keyword` | One exact query, e.g. `sneaker store near me` |
 
-Recommended: `business_name` (strict displayed-name cross-check), `search_latitude`, `search_longitude`. Store pin coordinates are captured from the selected profile before gallery navigation, then used automatically. Optional coordinates are a fallback only if the pin cannot be resolved; supply both together. Map camera centres (`@lat,long` / `center`) are never treated as the business pin. The resolved coordinates, source URL and method are retained in JSON and shown in the report. `expected_address` and `phone` can be retained as inputs for manual corroboration; automated routing/address-truth verification is not implemented. Duplicate business names do not establish identity; use an exact profile link/CID. Expected-name mismatches stop the competitor loop for review. Maximum 100 rows, one job at a time. The web upload cap is 3.5 MB before encoding.
+Recommended: `business_name` (strict displayed-name cross-check), `search_latitude`, `search_longitude`. Store pin coordinates are captured from the selected profile before gallery navigation, then used automatically. Optional coordinates are a fallback only if the pin cannot be resolved; supply both together. Map camera centres (`@lat,long` / `center`) are never treated as the business pin. The resolved coordinates, source URL and method are retained in JSON and shown in the report. `expected_address`, `phone` and `expected_hours` support source-versus-profile discrepancy checks where both values are available. Differences need factual confirmation; automated routing/address-truth verification is not implemented. Duplicate business names do not establish identity; use an exact profile link/CID. Expected-name mismatches stop the competitor loop for review. Maximum 100 rows, one job at a time. The web upload cap is 3.5 MB before encoding.
 
 Download [template](docs/template.csv). Never upload passwords, access tokens or unrelated customer data.
 
@@ -89,4 +90,10 @@ Supported inputs include Google Maps place/CID/Place-ID/search URLs, `maps.app.g
 
 Click **Audit & create PowerPoint** once after pairing and consent. Collection and report generation run together; no separate report-building step is required. The resulting PPT embeds available target GBP and keyword-results screenshots, the observed target/competitor positions, location source, all 21 comparison criteria, website/schema/embed comparisons, missing inputs and actions. All 70 master checks remain in CSV. Full form values are in `form-comparison.csv`, JSON and table slide notes. If a screenshot was blocked or unavailable, the report identifies the gap rather than inserting a substitute. Click the labelled PowerPoint download when the job completes.
 
-Upgrading from v1.0: download the latest source, update dependencies if needed, and restart `python runner.py`. Refreshing the public website alone does not update the local Python collector. The website checks runner compatibility before starting.
+Upgrading to v1.2: download the latest source, update dependencies if needed, and restart `python runner.py`. Refreshing the public website alone does not update the local Python collector. The website checks runner compatibility before starting.
+
+## Report format (v1.2)
+
+Findings appear beside the actual profile and ranking screenshots. Competitor tables include displayed photo totals, clearly separated from samples. Missing values and unmeasured rankings remain explicit. Full form criteria and linked-page details remain in slide notes, CSV and JSON so the client slides stay concise. The action plan combines one-time setup and recurring work, then sequences it across 30 days. Suggested posts, photos and WhatsApp availability are opportunities, not proven causes of a ranking difference. Profile changes still require business approval.
+
+Bulk jobs also produce one combined PowerPoint per keyword/measurement-method group. Invalid or unmeasured ranks follow measured and censored results; they are never assigned a numeric rank.
