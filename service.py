@@ -10,6 +10,7 @@ ROOT=pathlib.Path(os.environ.get('AUDIT_DATA_DIR','service-data')).resolve()
 ORIGINS={x.strip().rstrip('/') for x in os.environ.get('AUDIT_ALLOWED_ORIGINS','https://askamrendar.github.io').split(',') if x.strip()}
 TTL=int(os.environ.get('AUDIT_RETENTION_HOURS','24'))*3600
 MAX_ROWS=int(os.environ.get('AUDIT_MAX_STORES','10'))
+EPHEMERAL=os.environ.get('AUDIT_STORAGE_EPHEMERAL','false').lower()=='true'
 JOBS={};LOCK=threading.RLock();POOL=concurrent.futures.ThreadPoolExecutor(max_workers=1)
 ATTEMPTS=defaultdict(deque);LOG=logging.getLogger('gbp.audit')
 
@@ -94,7 +95,7 @@ async def payload(request):
  except (ValueError,UnicodeError):raise HTTPException(400,'Invalid JSON request')
 
 @app.get('/api/health')
-def health():return {'name':'GBP Audit by Amrendar','version':'1.3','ready':True,'mode':'hosted','retention_hours':TTL//3600}
+def health():return {'name':'GBP Audit by Amrendar','version':'1.3','ready':True,'mode':'hosted','retention_hours':TTL//3600,'max_stores':MAX_ROWS,'ephemeral_storage':EPHEMERAL}
 
 @app.post('/api/session')
 def session(request:Request):
@@ -160,7 +161,7 @@ def download(request:Request,jid:str,name:str):
  return FileResponse(file,filename=file.name)
 
 @app.get('/config.js')
-def config():return Response('window.GBP_AUDIT_CONFIG = {apiBase: "/api", hosted: true};',media_type='application/javascript')
+def config():return Response('window.GBP_AUDIT_CONFIG = '+json.dumps({'apiBase':'/api','hosted':True,'maxStores':MAX_ROWS,'ephemeral':EPHEMERAL})+';',media_type='application/javascript')
 
 @app.get('/')
 def index():return FileResponse(pathlib.Path(__file__).parent/'docs/index.html')

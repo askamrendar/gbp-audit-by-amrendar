@@ -35,7 +35,7 @@ class ServiceTests(unittest.TestCase):
   jid=secrets.token_hex(12);folder=self.root/jid;folder.mkdir();p=folder/'A';p.mkdir();(p/'audit.json').write_text(json.dumps(sample()));files=rebuild_reports(folder)
   service.JOBS[jid]={'id':jid,'owner':who or service.hashlib.sha256(self.token.encode()).hexdigest(),'created_at':time.time(),'status':'completed','messages':[],'files':files};service.persist(service.JOBS[jid]);return jid
  def test_auto_session_and_config(self):
-  self.assertEqual(len(self.token),43);self.assertIn('hosted: true',self.client.get('/config.js').text);self.assertEqual(self.client.get('/api/health').json()['mode'],'hosted')
+  self.assertEqual(len(self.token),43);self.assertIn('"hosted": true',self.client.get('/config.js').text);self.assertEqual(self.client.get('/api/health').json()['mode'],'hosted')
  def test_origin_and_auth(self):
   self.assertEqual(self.client.get('/api/jobs').status_code,401);self.assertEqual(self.client.post('/api/session',headers={'Origin':'https://evil.test'}).status_code,403)
  def test_private_history_and_cross_session_download(self):

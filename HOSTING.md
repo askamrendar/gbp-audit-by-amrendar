@@ -68,6 +68,5 @@ The service's API tests cover session isolation, queue limits, request consent, 
 
 ## Render deployment
 
-A `render.yaml` Blueprint defines one Docker web service in Singapore, the 1 CPU / 2 GB plan, a 1 GB persistent disk, `/api/health` checks and automatic deployment after GitHub checks pass. Creating it provisions paid resources; review the current price and approve it in Render first. The proposed service stores private reports under `/data/audits`. Use one instance and one worker.
-
+The `render.yaml` Blueprint now uses the free Docker web-service plan in Singapore with no persistent disk, following the user's free-only choice. It sets `/api/health`, one worker, one-store jobs and ephemeral report storage. No paid resources are configured. Free services can sleep, restart and run out of browser memory; downloads must be saved promptly. The free configuration does not provide durable 24-hour file retention.
 After deployment, verify the actual Render HTTPS address (it may differ from the proposed name), test `/api/health`, then set `docs/config.js` to that address followed by `/api` with `hosted: true`. Keep Pages in local mode until the service is healthy. Test automatic connection, a real audit, PPTX/ZIP downloads and recovery through the Pages address before calling the deployment complete.

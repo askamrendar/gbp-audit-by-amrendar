@@ -35,7 +35,7 @@ async function connect(){
   if(hosted&&!token){const r=await(await api('/session',{method:'POST'})).json();token=r.token;storeSession();}
   const health=await(await api('/health')).json(),[major,minor]=String(health.version||'0.0').split('.').map(Number);
   if(!(major>1||(major===1&&minor>=3)))throw Error('Update needed: download the latest project and restart the Python runner.');
-  connected=true;$('connection').textContent=hosted?'Connected · audits run in the background':'Connected · ready to audit';const recent=await refreshHistory();if(!activeJob)activeJob=(recent||[]).find(j=>['queued','running'].includes(j.status))?.id||'';
+  if(hosted&&health.max_stores)$('bulkLimit').textContent='Hosted limit: '+health.max_stores+' store(s) per job / 3.5 MB file. Reports and screenshots are processed on the hosted service.';connected=true;$('connection').textContent=hosted?'Connected · audits run in the background':'Connected · ready to audit';const recent=await refreshHistory();if(!activeJob)activeJob=(recent||[]).find(j=>['queued','running'].includes(j.status))?.id||'';
   if(activeJob){busy=true;openJob(activeJob);}
  }catch(e){connected=false;$('connection').textContent=hosted?'Background service unavailable. Try again shortly.':e.status===403?'Pairing code rejected. Copy the current code from the running Python window; restarting it creates a new code.':e.message.startsWith('Update needed:')?e.message:'Cannot reach the runner on this computer. Start Python runner.py and keep it open, or use the local interface linked above.';}
  finally{$('connect').disabled=false;startState();}
@@ -92,11 +92,11 @@ $('rebuild').onclick=async()=>{
 };
 if(hosted){
  try{token=sessionStorage.getItem(sessionKey)||'';}catch{}
- $('setupIntro').innerHTML='<span class="step">01 / READY</span><h2>Your audit runs in the background</h2><p>No Python, extensions or local setup. Enter your store link and keyword below. Reopen audits from Recent audits in this browser tab. Hosted reports are retained for 24 hours; download files you want to keep.</p>';
+ $('setupIntro').innerHTML='<span class="step">01 / READY</span><h2>Your audit runs in the background</h2><p>No Python, extensions or local setup. Enter your store link and keyword below. Reopen audits from Recent audits in this browser tab. Download reports you want to keep. Reports may expire or be lost when a free service restarts.</p>';
  for(const element of [$('token'),$('connect'),document.querySelector('label[for=token]')])element.hidden=true;
  $('retryConnection').hidden=false;for(const option of $('media').options)if(Number(option.value)>20)option.remove();
- $('bulkLimit').textContent='Hosted limit: 10 stores per job / 3.5 MB file. Reports and screenshots are processed on the hosted service.';
+ $('bulkLimit').textContent='Hosted limit: '+(config.maxStores||10)+' store(s) per job / 3.5 MB file. Reports and screenshots are processed on the hosted service.';
  $('consentText').textContent='I approve public browser collection and screenshots on the hosted service. This does not edit profiles or bypass access blocks.';
- $('resultHelp').textContent='Collection and PowerPoint generation run automatically in the background. Reopen this app in the same tab and use Recent audits to recover progress and downloads. Download files within 24 hours.';
+ $('resultHelp').textContent='Collection and PowerPoint generation run automatically in the background. Reopen this app in the same tab and use Recent audits to recover progress and downloads. Download files promptly; on free hosting they can be lost after a restart.';
  connect();
 }

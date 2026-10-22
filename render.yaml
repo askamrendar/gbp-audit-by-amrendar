@@ -1,10 +1,10 @@
-# Production proposal: creating this Blueprint starts paid Render resources.
-# Review/approve the plan in Render before deployment.
+# Free-tier deployment selected by the user.
+# No persistent disk: reports can disappear on restart or redeploy.
 services:
   - type: web
     name: gbp-audit-by-amrendar
     runtime: docker
-    plan: 1c-2g
+    plan: free
     region: singapore
     branch: main
     dockerfilePath: ./Dockerfile
@@ -12,10 +12,6 @@ services:
     healthCheckPath: /api/health
     numInstances: 1
     autoDeployTrigger: checksPass
-    disk:
-      name: gbp-audit-reports
-      mountPath: /data
-      sizeGB: 1
     envVars:
       - key: AUDIT_DATA_DIR
         value: /data/audits
@@ -24,4 +20,6 @@ services:
       - key: AUDIT_RETENTION_HOURS
         value: '24'
       - key: AUDIT_MAX_STORES
-        value: '10'
+        value: '1'
+      - key: AUDIT_STORAGE_EPHEMERAL
+        value: 'true'
