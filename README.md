@@ -4,7 +4,7 @@ Browser-based GBP audits with background collection, keyword competitor comparis
 
 **Website:** https://askamrendar.github.io/gbp-audit-by-amrendar/
 
-**Live hosted service:** https://gbp-audit-by-amrendar.onrender.com/ — GitHub Pages connects automatically. No local Python, extension or pairing code is needed. The free Render service may take up to 90 seconds to wake, allows one store per job and uses temporary storage. Download reports promptly; restarts can remove them. **Full audits are currently unreliable on the 512 MB free plan:** the live TRENDS test restarted during keyword collection. See [HOSTING.md](HOSTING.md) and [VALIDATION.md](VALIDATION.md).
+**Live hosted service:** https://gbp-audit-by-amrendar.onrender.com/ — GitHub Pages connects automatically. No local Python, extension or pairing code is needed. The free Render service may take up to 90 seconds to wake, allows one store per job and uses temporary storage. Download reports promptly; restarts can remove them. **Free-plan pilot verified after memory optimization:** a fresh TRENDS audit collected the target, linked pages, keyword results and three comparison profiles, then generated and downloaded valid PPTX/ZIP files. Larger pages can still exceed 512 MB; gallery sampling remains disabled. See [HOSTING.md](HOSTING.md) and [VALIDATION.md](VALIDATION.md).
 
 ## Use the hosted app
 
