@@ -27,7 +27,7 @@ def export_ppt(data,path):
  from PIL import Image
  r=Presentation();r.slide_width=Inches(13.333);r.slide_height=Inches(7.5)
  brand=data.get('brand') or {};raw=brand.get('color','#133b36').lstrip('#');raw=raw if re.fullmatch('[a-fA-F0-9]{6}',raw) else '133b36';ink=RGBColor.from_string(raw.upper());muted=RGBColor(86,104,100)
- profiles=data['profiles'];target=profiles[0];rank=data.get('ranking',{});keyword=data['input']['keyword'];names=[p.get('name','Unresolved') for p in profiles];names[0]+=' ('+data['input']['store_code']+')'
+ profiles=data['profiles'];target=profiles[0];rank=data.get('ranking',{});keyword=data['input']['keyword'];names=[p.get('name') or 'Unresolved' for p in profiles];names[0]+=' ('+data['input']['store_code']+')'
  def text(s,value,x,y,w,h,size=18,color=None,bold=False):
   t=s.shapes.add_textbox(Inches(x),Inches(y),Inches(w),Inches(h));t.text_frame.word_wrap=True
   t.text_frame.text=str(value)
@@ -49,6 +49,7 @@ def export_ppt(data,path):
    for j,value in enumerate(row):
     cell=tab.cell(i,j);cell.text=(str(value)[:107]+'…') if len(str(value))>110 else str(value);cell.margin_left=cell.margin_right=Inches(.1);cell.margin_top=Inches(.035);cell.margin_bottom=Inches(.025);cell.fill.solid();cell.fill.fore_color.rgb=ink if i==0 else RGBColor(*( (242,246,242) if i%2 else (255,255,255)))
     for p in cell.text_frame.paragraphs:p.font.name='Aptos';p.font.size=Pt(11 if len(headers)<=3 else 10.5);p.font.bold=i==0 or j==0;p.font.color.rgb=RGBColor(255,255,255) if i==0 else ink
+  s.notes_slide.notes_text_frame.text='Full comparison values:\n'+'\n'.join(' | '.join(map(str,row)) for row in [headers]+rows)+'\nSource: audit.json and form-comparison.csv; no assumed failures.'
   return tab
  def notes(s,value):s.notes_slide.notes_text_frame.text=value
  s=slide(brand.get('client') or target.get('name') or data['input']['store_code']);text(s,'Local visibility & competitor audit',.6,2,11,1.2,38,bold=True);text(s,keyword,.65,3.5,11,.8,25);text(s,'Evidence collected '+data['started_at'][:10]+'\nPublic evidence report · owner and visual checks remain open',.65,5.2,11,1,16,muted)
@@ -56,8 +57,8 @@ def export_ppt(data,path):
  pos=next((x['position'] for x in rank.get('results',[]) if x.get('entity_id')==target.get('entity_id') and target.get('entity_id')),None)
  text(s,('Observed target position: '+str(pos) if pos else 'Target position not established in loaded results')+' · exploratory Maps area view; physical customer origin unverified',.6,6.65,12,.4,12,muted);notes(s,json_sources(data))
  s=slide('The local comparison','Competitors come from the observed keyword results. A ranking observation does not prove causation.')
- table(s,['Profile','Role / observed order','Website / collection'],[[names[i],'Target' if i==0 else 'Observed keyword competitor',p.get('website') or p.get('blocker') or 'Website link not exposed / missing; see checklist'] for i,p in enumerate(profiles)],height=3.8)
- text(s,'Search centre: '+str(rank.get('requested_center','Unresolved'))+' · '+str(rank.get('blocker') or rank.get('sponsored_exclusion','Review screenshot and identity matches before accepting order.')),.6,6,12,.7,13,muted)
+ table(s,['Profile','Role / observed order','Website / collection'],[[names[i],('Target · '+str(next((x['position'] for x in rank.get('results',[]) if x.get('entity_id')==p.get('entity_id') and p.get('entity_id')), 'not in loaded results'))) if i==0 else 'Observed order '+str(next((x['position'] for x in rank.get('results',[]) if x.get('entity_id')==p.get('entity_id') and p.get('entity_id')), 'unresolved')),p.get('website') or p.get('blocker') or 'Website link not exposed / missing; see checklist'] for i,p in enumerate(profiles)],height=3.8)
+ text(s,'Search centre: '+str(rank.get('requested_center','Unresolved'))+' ('+str((data.get('search_location') or {}).get('source','unresolved'))+')'+' · '+str(rank.get('blocker') or rank.get('sponsored_exclusion','Review screenshot and identity matches before accepting order.')),.6,6,12,.7,13,muted)
  counts=Counter(c['status'] for c in target.get('checks',[]));fails=[c for c in target.get('checks',[]) if c['status']=='Fail'];partials=[c for c in target.get('checks',[]) if c['status']=='Partial']
  s=slide('What needs attention','Fail = evidenced problem · Partial = some evidence, acceptance incomplete · Unknown = not established · NA requires a reason')
  text(s,' · '.join(f'{k}: {v}' for k,v in counts.items()),.6,1.85,12,.55,20,bold=True)

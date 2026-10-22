@@ -19,7 +19,7 @@ def validate_rows(rows):
   if not audit.re.fullmatch(r'[A-Za-z0-9_-]{1,64}',str(row.get('store_code',''))):raise ValueError('Store code: use letters, numbers, hyphens or underscores')
   audit.maps_url(str(row.get('maps_url','')))
   if not 1<=len(str(row.get('keyword','')).strip())<=200:raise ValueError('A keyword is required (up to 200 characters)')
-  if bool(str(row.get('search_latitude') or '').strip())!=bool(str(row.get('search_longitude') or '').strip()):raise ValueError('Supply both search coordinates together')
+  if bool(str(row.get('search_latitude') if row.get('search_latitude') is not None else '').strip())!=bool(str(row.get('search_longitude') if row.get('search_longitude') is not None else '').strip()):raise ValueError('Supply both search coordinates together')
   for key,lo,hi in [('search_latitude',-90,90),('search_longitude',-180,180)]:
    if row.get(key) not in [None,''] and not lo<=float(row[key])<=hi:raise ValueError('Invalid search coordinates')
  return rows
@@ -61,7 +61,7 @@ class Handler(BaseHTTPRequestHandler):
    types={'.html':'text/html; charset=utf-8','.js':'text/javascript','.css':'text/css','.csv':'text/csv'}
    self.headers_(200,types.get(f.suffix,'text/plain'));self.end_headers();self.wfile.write(f.read_bytes());return
   if not self.auth():return self.json_(403,{'error':'Connect using the pairing code shown by your local runner'})
-  if path=='/health':return self.json_(200,{'name':'GBP Audit by Amrendar','version':'1.0','ready':True})
+  if path=='/health':return self.json_(200,{'name':'GBP Audit by Amrendar','version':'1.1','ready':True})
   parts=path.strip('/').split('/')
   if len(parts)>=2 and parts[0]=='jobs' and parts[1] in JOBS:
    job=JOBS[parts[1]]

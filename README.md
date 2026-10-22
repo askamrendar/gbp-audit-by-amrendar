@@ -23,7 +23,7 @@ The public site is static. **Every user needs their own running Python process. 
 
 ## What runs
 
-For each store/keyword: resolve the target profile, capture the profile view, collect a Maps keyword result list around the supplied/inferred map centre, exclude explicitly labelled ads, inspect the first three observed results (deduplicating the target), and collect the linked public websites plus up to two same-host supplementary location/contact pages. Profile, hours, About, posts and bounded item-level gallery collection are attempted where the interface exposes them. Access blocks stop affected collection; no CAPTCHA bypass or login automation.
+For each store/keyword: resolve the target profile, capture the profile view, collect a Maps keyword result list around the automatically resolved GBP store pin, exclude explicitly labelled ads, inspect the first three observed results (deduplicating the target), and collect the linked public websites plus up to two same-host supplementary location/contact pages. Profile, hours, About, posts and bounded item-level gallery collection are attempted where the interface exposes them. Access blocks stop affected collection; no CAPTCHA bypass or login automation.
 
 Outputs per store:
 
@@ -51,10 +51,10 @@ CSV (UTF-8) or XLSX, first worksheet, one row per store/keyword. Required:
 | Column | Purpose |
 |---|---|
 | `store_code` | Stable unique code, letters/numbers/hyphens/underscores |
-| `maps_url` | Exact HTTPS Google Maps business profile link |
+| `maps_url` | Long/short HTTPS Google Maps profile or specific business search link |
 | `keyword` | One exact query, e.g. `sneaker store near me` |
 
-Recommended: `business_name` (strict displayed-name cross-check), `search_latitude`, `search_longitude`. Both coordinates must be supplied together. `expected_address` and `phone` can be retained as inputs for manual corroboration; automated routing/address-truth verification is not implemented. Duplicate business names do not establish identity; use an exact profile link/CID. Expected-name mismatches stop the competitor loop for review. Maximum 100 rows, one job at a time. The web upload cap is 3.5 MB before encoding.
+Recommended: `business_name` (strict displayed-name cross-check), `search_latitude`, `search_longitude`. Store pin coordinates are captured from the selected profile before gallery navigation, then used automatically. Optional coordinates are a fallback only if the pin cannot be resolved; supply both together. Map camera centres (`@lat,long` / `center`) are never treated as the business pin. The resolved coordinates, source URL and method are retained in JSON and shown in the report. `expected_address` and `phone` can be retained as inputs for manual corroboration; automated routing/address-truth verification is not implemented. Duplicate business names do not establish identity; use an exact profile link/CID. Expected-name mismatches stop the competitor loop for review. Maximum 100 rows, one job at a time. The web upload cap is 3.5 MB before encoding.
 
 Download [template](docs/template.csv). Never upload passwords, access tokens or unrelated customer data.
 
@@ -82,3 +82,9 @@ python -m unittest discover -s tests
 Original project code; no external scraper source copied. Reviewed [gosom/google-maps-scraper](https://github.com/gosom/google-maps-scraper) (MIT, Go-based) and [alokumarjaiswal/gmaps_scraper](https://github.com/alokumarjaiswal/gmaps_scraper) as references. Their implementation was not necessary for this local Python architecture. Dependencies retain their own licences.
 
 Primary platform references: [GitHub Pages](https://docs.github.com/en/pages/getting-started-with-github-pages/what-is-github-pages), [Chrome local network access](https://developer.chrome.com/blog/local-network-access), [Playwright persistent contexts](https://playwright.dev/python/docs/api/class-browsertype#browser-type-launch-persistent-context).
+
+## Link handling and one-click reports (v1.1)
+
+Supported inputs include Google Maps place/CID/Place-ID/search URLs, `maps.app.goo.gl`, legacy `goo.gl/maps`, `g.page` and `share.google` links. Short links are resolved in the browser before extracting the selected GBP pin. If a CID link does not expose a pin, a bounded category/address discovery search attempts to find the exact same CID and extract its place coordinates. This discovery query is retained separately and is never reported as the requested keyword ranking. Google Search business URLs are routed to the equivalent Maps query (or exact `ludocid`). A search resolving to several businesses requires a unique expected name/address or an exact business profile link; the app never selects an arbitrary first business. Broken/expired short links and Google access blocks remain explicit collection gaps.
+
+Click **Audit & create PowerPoint** once after pairing and consent. Collection and report generation run together; no separate report-building step is required. The resulting PPT embeds available target GBP and keyword-results screenshots, the observed target/competitor positions, location source, all 21 comparison criteria, website/schema/embed comparisons, missing inputs and actions. All 70 master checks remain in CSV. Full form values are in `form-comparison.csv`, JSON and table slide notes. If a screenshot was blocked or unavailable, the report identifies the gap rather than inserting a substitute. Click the labelled PowerPoint download when the job completes.

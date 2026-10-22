@@ -1,18 +1,70 @@
 #!/usr/bin/env python3
 """Local, extension-free, read-only GBP audit runner. See README for coverage limits."""
 import argparse,csv,datetime as dt,hashlib,html,ipaddress,json,pathlib,re,socket,sys,time
-from urllib.parse import urlparse,quote,unquote
+from urllib.parse import urlparse,quote,unquote,parse_qs
 BASE=pathlib.Path(__file__).resolve().parent
 
 def now():return dt.datetime.now(dt.timezone.utc).isoformat()
 def dump(path,obj):
  path=pathlib.Path(path);path.parent.mkdir(parents=True,exist_ok=True);path.write_text(json.dumps(obj,indent=2,ensure_ascii=False))
 def maps_url(url):
- p=urlparse(url);h=(p.hostname or '').lower()
- if p.scheme!='https' or not (h in ['maps.app.goo.gl','maps.google.com','goo.gl'] or re.fullmatch(r'(www\.)?google\.(com|co\.[a-z]{2}|[a-z]{2})',h)) or p.username or p.password:raise ValueError('Use an HTTPS Google Maps business profile link')
- if h=='goo.gl' and not p.path.startswith('/maps/'):raise ValueError('Use a Maps short link')
- if h not in ['maps.app.goo.gl','maps.google.com','goo.gl'] and not p.path.startswith('/maps'):raise ValueError('Use a Google Maps profile, not a generic Google page')
+ url=str(url).strip();p=urlparse(url);h=(p.hostname or '').lower()
+ google=bool(re.fullmatch(r'(www\.)?google\.(com|co\.[a-z]{2}|[a-z]{2})',h))
+ if p.scheme!='https' or p.username or p.password or p.port not in [None,443]:raise ValueError('Use an HTTPS Google Maps or Google business search link')
+ if h=='goo.gl':valid=p.path.startswith('/maps/')
+ elif h in ['maps.app.goo.gl','maps.google.com','g.page','share.google']:valid=bool(p.path.strip('/')) or h=='maps.google.com'
+ else:valid=google and (p.path.startswith('/maps') or (p.path=='/search' and bool(parse_qs(p.query).get('q'))))
+ if not valid:raise ValueError('Use a Google Maps profile, Maps short link or specific Google business search URL')
  return url
+
+def normalize_search_link(url):
+ p=urlparse(url)
+ if p.path=='/search' and re.fullmatch(r'(www\.)?google\.(com|co\.[a-z]{2}|[a-z]{2})',p.hostname or ''):
+  params=parse_qs(p.query)
+  if params.get('ludocid') and params['ludocid'][0].isdigit():return 'https://www.google.com/maps?cid='+params['ludocid'][0]
+  if params.get('q'):return 'https://www.google.com/maps/search/?api=1&query='+quote(params['q'][0],safe='')
+ return url
+
+def pin_coordinates(url):
+ """Extract an explicit place pin, never an @ viewport or map center."""
+ value=unquote(url);m=re.search(r'!3d(-?[\d.]+)!4d(-?[\d.]+)',value)
+ if not m:return None
+ try:lat,lon=float(m[1]),float(m[2])
+ except ValueError:return None
+ if not (-90<=lat<=90 and -180<=lon<=180):return None
+ return {'latitude':lat,'longitude':lon,'source':'selected_profile_pin','source_url':url}
+
+def choose_candidate(entries,expected_name='',expected_address=''):
+ unique={}
+ for e in entries:
+  eid=identity(e.get('url',''))
+  if eid:unique.setdefault(eid,e)
+ values=list(unique.values())
+ if expected_name:
+  norm=lambda v:re.sub(r'\W+',' ',str(v).casefold()).strip()
+  values=[e for e in values if norm(e.get('name',''))==norm(expected_name)]
+ if expected_address:
+  needle=re.sub(r'\W+',' ',expected_address.casefold()).strip()
+  values=[e for e in values if needle in re.sub(r'\W+',' ',e.get('card','').casefold())]
+ return values[0] if len(values)==1 else None
+
+def resolve_profile_page(page,expected_name='',expected_address=''):
+ # A selected GBP must have a business h1; search headings and feeds are not profiles.
+ def selected():
+  business=page.locator('h1.DUwDvf')
+  if business.count() and business.first.inner_text().strip():return True
+  heading=page.locator('h1')
+  return bool(identity(page.url) and heading.count() and heading.first.inner_text().strip() and not page.locator('[role="feed"]').count())
+ if selected():return None
+ links=page.locator('a[href*="/maps/place/"],a[href*="maps?cid="],a[href*="maps/search/?"]')
+ try:links.first.wait_for(timeout=10000)
+ except Exception:return 'No unique business profile exposed by this link; supply its exact Maps profile link'
+ entries=links.evaluate_all('(els)=>els.map(e=>({url:e.href,name:e.getAttribute("aria-label")||e.innerText,card:e.closest("[role=article]")?.innerText||e.parentElement?.innerText||""}))')
+ candidate=choose_candidate(entries,expected_name,expected_address)
+ if not candidate:return 'Search link has ambiguous or unmatched businesses; supply an exact profile link or a unique expected name/address'
+ page.goto(maps_url(candidate['url']),wait_until='domcontentloaded',timeout=30000);settle(page)
+ if not selected():return 'Selected result did not resolve to a business profile'
+ return None
 
 def public_url(url):
  p=urlparse(url)
@@ -22,7 +74,7 @@ def public_url(url):
  except (socket.gaierror,ValueError):return False
 
 def identity(url):
- s=unquote(url);m=re.search(r'[?&]cid=(\d+)',s)
+ s=unquote(url);m=re.search(r'[?&](?:cid|ludocid)=(\d+)',s)
  if m:return 'cid-'+m[1]
  m=re.search(r'0x[0-9a-f]+:(0x[0-9a-f]+)',s,re.I)
  if m:return 'cid-'+str(int(m[1],16))
@@ -52,8 +104,10 @@ def blocked(page):
 
 def settle(page):
  page.locator('body').wait_for(timeout=20000)
- try:page.locator('h1, [role="feed"], [role="main"]').first.wait_for(timeout=15000)
+ try:
+  page.wait_for_function("Array.from(document.querySelectorAll('h1')).some(e=>e.innerText.trim().length>0) || document.querySelector('[role=feed] a[href*=\"/maps/place/\"]') || location.href.includes('/sorry/')",timeout=15000)
  except Exception:pass
+
 
 def capture(page,folder,stem):
  folder.mkdir(parents=True,exist_ok=True);shot=folder/(stem+'.png');text=folder/(stem+'.txt')
@@ -106,17 +160,30 @@ def gallery(page,folder,limit):
  except Exception as exc:result['blocker']='Gallery collection unavailable: '+type(exc).__name__
  return result
 
-def profile(context,url,folder,media_limit,expected_id=None):
+def profile(context,url,folder,media_limit,expected_id=None,expected_name='',expected_address=''):
  page=context.new_page();result={'requested_url':url,'attempted_at':now(),'errors':[]}
  try:
-  page.goto(url,wait_until='domcontentloaded',timeout=30000);settle(page)
+  page.goto(normalize_search_link(url),wait_until='domcontentloaded',timeout=30000);settle(page)
+  normalized=normalize_search_link(page.url)
+  if normalized!=page.url:page.goto(normalized,wait_until='domcontentloaded',timeout=30000);settle(page)
   if blocked(page):result.update(blocker=blocked(page),evidence=capture(page,folder,'blocked'));return result
+  issue=resolve_profile_page(page,expected_name,expected_address)
+  if issue:result.update(blocker=issue,evidence=capture(page,folder,'unresolved'));return result
+  result['profile_url']=page.url
+  result['coordinates']=pin_coordinates(page.url)
   result.update(capture(page,folder,'profile'));result['entity_id']=identity(page.url) or identity(url)
   h=page.locator('h1');result['name']=h.first.inner_text() if h.count() else None
   if not result['name']:result['errors'].append('No business heading; identity unresolved');return result
-  if expected_id and result['entity_id'] and expected_id!=result['entity_id']:result['errors'].append('Exact profile identity mismatch');return result
+  if expected_id and result['entity_id'] and expected_id.split('-')[0]==result['entity_id'].split('-')[0] and expected_id!=result['entity_id']:result['errors'].append('Exact profile identity mismatch');return result
   for field,pattern in [('address',r'^Address:'),('phone',r'^Phone:')]:
    loc=page.get_by_role('button',name=re.compile(pattern));result[field]=loc.first.get_attribute('aria-label') if loc.count() else None
+  if not result['coordinates']:
+   for href in page.locator('a[href]').evaluate_all('(els)=>els.map(e=>e.href)'):
+    if '/maps/dir/' not in href:continue
+    dest=parse_qs(urlparse(href).query).get('destination',[''])[0]
+    if re.fullmatch(r'-?[\d.]+,-?[\d.]+',dest):
+     lat,lon=map(float,dest.split(','))
+     if -90<=lat<=90 and -180<=lon<=180:result['coordinates']={'latitude':lat,'longitude':lon,'source':'profile_directions_destination','source_url':href};break
   category=page.locator('button[jsaction*="category"]')
   result['category']=category.first.inner_text() if category.count() else None
   reviews=page.get_by_role('button',name=re.compile(r'[\d,]+ reviews'))
@@ -161,6 +228,28 @@ def profile(context,url,folder,media_limit,expected_id=None):
  except Exception as exc:result['errors'].append(type(exc).__name__+': profile collection interrupted')
  finally:page.close()
  return result
+
+def lookup_coordinates(context,target,folder):
+ """Resolve a pin from a public result with the SAME CID; discovery is not keyword ranking."""
+ if not target.get('entity_id') or not target.get('address') or not target.get('category'):return None
+ address=re.sub(r'^Address:\s*','',target['address']).strip()
+ shortened=', '.join(address.split(',')[-4:]).strip()
+ queries=list(dict.fromkeys([target['category']+' near '+address,target['category']+' near '+shortened]))
+ page=context.new_page();attempts=[]
+ try:
+  for n,query in enumerate(queries,1):
+   page.goto('https://www.google.com/maps/search/'+quote(query,safe='')+'/',wait_until='domcontentloaded',timeout=30000);settle(page)
+   if blocked(page):attempts.append({'query':query,'blocker':blocked(page)});break
+   urls=page.locator('a[href*="/maps/place/"]').evaluate_all('(els)=>els.map(e=>e.href)')
+   cap=capture(page,folder,'coordinate-lookup-'+str(n));attempts.append({'query':query,'url':page.url,'screenshot':cap['screenshot'],'observed_at':cap['observed_at']})
+   for url in urls:
+    if identity(url)!=target['entity_id']:continue
+    pin=pin_coordinates(url)
+    if pin:
+     pin.update(source='identity_matched_maps_result',entity_id=target['entity_id'],lookup_query=query,lookup_evidence=cap['screenshot'],observed_at=now());target['coordinate_lookup_attempts']=attempts;return pin
+ except Exception as exc:attempts.append({'blocker':type(exc).__name__+': coordinate lookup unavailable'})
+ finally:page.close();target['coordinate_lookup_attempts']=attempts
+ return None
 
 def rank_search(context,keyword,center,folder):
  page=context.new_page();r={'keyword':keyword,'method':'exploratory_maps_area_view','physical_origin_verified':False,'requested_center':center,'observed_at':now(),'results':[],'valid':False}
@@ -214,7 +303,7 @@ def assess(p):
   for c in checks:c['finding']='Collection blocked: '+p['blocker']
  return checks
 
-from report import export_ppt
+from report import export_ppt,form_values,FORM
 
 def run(rows,out,profile_dir,headless=False,executable=None,media_limit=10,channel='chrome',log=print,brand=None):
  from playwright.sync_api import sync_playwright
@@ -238,33 +327,43 @@ def run(rows,out,profile_dir,headless=False,executable=None,media_limit=10,chann
     if not str(row.get('keyword','')).strip():raise ValueError('Keyword is required')
     folder=out/(str(row['store_code'])+'-'+hashlib.sha256(row['keyword'].encode()).hexdigest()[:8]+'-'+dt.datetime.now(dt.timezone.utc).strftime('%Y%m%dT%H%M%S%fZ'));folder.mkdir(exist_ok=True);data={'input':row,'started_at':now(),'profiles':[],'brand':brand or {}}
     if not re.fullmatch(r'[A-Za-z0-9_-]{1,64}',str(row['store_code'])):raise ValueError('Store code must contain only letters, numbers, hyphens and underscores')
-    log('Collecting target '+str(row['store_code']));target=profile(context,maps_url(row['maps_url']),folder/'target',media_limit,identity(row['maps_url']));data['profiles'].append(target)
+    log('Collecting target '+str(row['store_code']));target=profile(context,maps_url(row['maps_url']),folder/'target',media_limit,identity(row['maps_url']),row.get('business_name',''),row.get('expected_address',''));data['profiles'].append(target)
     if not target.get('name') or not target.get('entity_id') or target.get('blocker') or 'Exact profile identity mismatch' in target.get('errors',[]):
      data['identity_review_required']=True
     if row.get('business_name') and target.get('name') and row['business_name'].strip().casefold()!=target['name'].strip().casefold():data['identity_review_required']=True;data['identity_warning']='Expected/displayed business names differ; confirm branch before using comparison.'
-    center=None
-    if row.get('search_latitude') is not None and row.get('search_longitude') is not None and str(row.get('search_latitude','')).strip() and str(row.get('search_longitude','')).strip():
+    coordinates=target.get('coordinates')
+    if not coordinates and not data.get('identity_review_required'):
+     log('Resolving store pin from an identity-matched Maps result')
+     coordinates=lookup_coordinates(context,target,folder/'location-resolution');target['coordinates']=coordinates
+    # Automatic store pin has priority; optional explicit coordinates are a disclosed fallback.
+    if not coordinates and row.get('search_latitude') not in [None,''] and row.get('search_longitude') not in [None,'']:
      lat,lon=float(row['search_latitude']),float(row['search_longitude'])
      if not(-90<=lat<=90 and -180<=lon<=180):raise ValueError('Invalid search coordinates')
-     center=f'{lat},{lon}'
-    if not center:
-     m=re.search(r'!3d(-?[\d.]+)!4d(-?[\d.]+)',unquote(target.get('resolved_url',target.get('url',''))))
-     if m:center=m[1]+','+m[2]
+     coordinates={'latitude':lat,'longitude':lon,'source':'user_supplied_fallback'}
+    data['search_location']=coordinates
+    center=f"{coordinates['latitude']},{coordinates['longitude']}" if coordinates else None
+    if center:log('Search location: '+center+' ('+coordinates['source']+')')
     if not data.get('identity_review_required'):
-     log('Collecting keyword results');data['ranking']=rank_search(context,row['keyword'],center,folder/'ranking') if center else {'valid':False,'results':[],'blocker':'Search location unresolved. Supply search_latitude and search_longitude; no top-three cohort asserted.'}
+     log('Collecting keyword results');data['ranking']=rank_search(context,row['keyword'],center,folder/'ranking') if center else {'valid':False,'results':[],'blocker':'Store pin could not be resolved from this link/profile. Supply an exact profile link or fallback coordinates; no top-three cohort asserted.'}
      if data['ranking']['valid']:
       seen={target.get('entity_id')}
       for n,c in enumerate(data['ranking']['results'][:3],1):
        if c['entity_id'] in seen:continue
        seen.add(c['entity_id']);log('Collecting competitor '+str(n));data['profiles'].append(profile(context,c['url'],folder/('competitor-'+str(n)),media_limit,c['entity_id']))
     else:data['ranking']={'valid':False,'blocker':'Target identity or collection unresolved; competitor loop not started'}
+    data['ranking']['coordinate_evidence']=coordinates
     for p in data['profiles']:p['checks']=assess(p)
+    data['form_comparison']=[{'entity':p.get('name'),'entity_id':p.get('entity_id'),'fields':[{'id':f'form21.F{i+1:02d}','criterion':label,'value':value} for i,(label,value) in enumerate(zip(FORM,form_values(p,row['keyword'])))]} for p in data['profiles']]
     data['completed_at']=now();dump(folder/'audit.json',data)
+    with (folder/'form-comparison.csv').open('w',newline='',encoding='utf-8') as f:
+     writer=csv.writer(f);writer.writerow(['entity','entity_id','field_id','criterion','observed_value'])
+     for entity in data['form_comparison']:
+      for field in entity['fields']:writer.writerow([entity['entity'],entity['entity_id'],field['id'],field['criterion'],field['value']])
     with (folder/'checklist.csv').open('w',newline='') as f:
      w=csv.writer(f);w.writerow(['entity','check_id','check','status','finding','next_input'])
      for p in data['profiles']:
       for c in p['checks']:w.writerow([p.get('name'),c['id'],c['check'],c['status'],c['finding'],c['next_input']])
-    export_ppt(data,folder/'audit-draft.pptx');log('Saved '+str(folder))
+    export_ppt(data,folder/'audit-draft.pptx');log('PowerPoint created with captured GBP and ranking screenshots: '+str(folder))
   finally:context.close()
  return str(out)
 

@@ -47,3 +47,16 @@ class RunnerTests(unittest.TestCase):
    self.assertEqual(job['status'],'completed');self.assertIn('audit-results.zip',job['files']);self.assertEqual(self.request('/jobs/'+jid+'/file/audit-draft.pptx').read(),b'test fixture')
    with self.assertRaises(urllib.error.HTTPError):self.request('/jobs/'+jid+'/file/..%2FREADME.md')
 if __name__=='__main__':unittest.main()
+
+class ScreenshotReportTests(unittest.TestCase):
+ def test_report_embeds_both_screenshots_and_all_form_criteria(self):
+  from PIL import Image
+  from pptx import Presentation
+  from pptx.enum.shapes import MSO_SHAPE_TYPE
+  with tempfile.TemporaryDirectory() as tmp:
+   d=pathlib.Path(tmp);image=d/'gbp.png';Image.new('RGB',(1280,900),'white').save(image)
+   data={'input':{'store_code':'A','keyword':'shoe'},'started_at':'2026-10-22','profiles':[{'name':'Example Store','screenshot':str(image),'checks':[]}],'ranking':{'screenshot':str(image),'requested_center':'28,77'},'search_location':{'source':'selected_profile_pin'}}
+   export_ppt(data,d/'audit.pptx');r=Presentation(d/'audit.pptx')
+   self.assertEqual(sum(x.shape_type==MSO_SHAPE_TYPE.PICTURE for x in r.slides[1].shapes),2)
+   table_text=' '.join(c.text for s in r.slides for shape in s.shapes if shape.has_table for row in shape.table.rows for c in row.cells)
+   for criterion in FORM:self.assertIn(criterion,table_text)

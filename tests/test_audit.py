@@ -8,8 +8,8 @@ class Tests(unittest.TestCase):
  def test_no_name_identity_guess(self):self.assertIsNone(identity('https://www.google.com/maps/place/Foot+Locker'))
  def test_maps_host_impersonation_rejected(self):
   with self.assertRaises(ValueError):maps_url('https://google.com.attacker.test/maps')
- def test_google_non_maps_rejected(self):
-  with self.assertRaises(ValueError):maps_url('https://www.google.com/search?q=shoes')
+ def test_google_non_business_page_rejected(self):
+  with self.assertRaises(ValueError):maps_url('https://www.google.com/about')
  def test_credentials_rejected(self):
   with self.assertRaises(ValueError):maps_url('https://user:password@google.com/maps')
  def test_private_network_blocked(self):
