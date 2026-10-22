@@ -1,6 +1,6 @@
 .venv/
 .audit-browser/
-.test-browser/
+.test-browser*/
 __pycache__/
 *.pyc
 runs/

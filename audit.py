@@ -171,7 +171,7 @@ def parse_photo_label(label):
  if not m:return None
  return {'raw_label':label,'total':int(m[1].replace(',','')),'label_kind':'media' if re.search(r'video|media',m[2],re.I) else 'photos'}
 
-def profile(context,url,folder,media_limit,expected_id=None,expected_name='',expected_address='',progress=None):
+def profile(context,url,folder,media_limit,expected_id=None,expected_name='',expected_address='',progress=None,recycle=None):
  page=context.new_page();result={'requested_url':url,'attempted_at':now(),'errors':[]}
  if progress:progress('Opening the public Maps profile')
  try:
@@ -250,6 +250,7 @@ def profile(context,url,folder,media_limit,expected_id=None,expected_name='',exp
    # linked site so the free worker never keeps both heavy pages alive.
    page.close()
    if progress:progress('Maps page closed; inspecting the linked website')
+   if recycle:context=recycle()
    wp=context.new_page()
    try:
     result['website_audit']=website(wp,result['website'],folder,'website')
@@ -353,20 +354,30 @@ def run(rows,out,profile_dir,headless=False,executable=None,media_limit=10,chann
   # Use Playwright's bundled headless shell for hosted Chromium jobs, reducing
   # memory overhead while preserving normal multiprocess browser isolation.
   if headless and channel=='chromium':args['args']=['--renderer-process-limit=2','--disable-gpu','--disable-webgl','--js-flags=--max-old-space-size=160']
-  context=pw.chromium.launch_persistent_context(**args)
+  context=None
   # No access to private/local network destinations; no profile mutation UI is invoked.
   def route(req):
    u=urlparse(req.request.url)
    if u.scheme in ['http','https'] and not public_url(req.request.url):req.abort()
    else:req.continue_()
-  context.route('**/*',route)
+  # Closing a tab alone can retain browser/GPU caches. Hosted collections
+  # restart the browser between stages; saved screenshots and facts stay on disk.
+  def fresh_context():
+   nonlocal context
+   if context is not None:context.close()
+   context=pw.chromium.launch_persistent_context(**args)
+   context.route('**/*',route)
+   return context
+  fresh_context()
+  recycle=fresh_context if headless and channel=='chromium' else None
   try:
-   for row in rows:
+   for row_index,row in enumerate(rows):
+    if row_index and recycle:recycle()
     if not re.fullmatch(r'[A-Za-z0-9_-]{1,64}',str(row.get('store_code',''))):raise ValueError('Invalid store code')
     if not str(row.get('keyword','')).strip():raise ValueError('Keyword is required')
     folder=out/(str(row['store_code'])+'-'+hashlib.sha256(row['keyword'].encode()).hexdigest()[:8]+'-'+dt.datetime.now(dt.timezone.utc).strftime('%Y%m%dT%H%M%S%fZ'));folder.mkdir(exist_ok=True);data={'input':row,'started_at':now(),'profiles':[],'brand':brand or {}}
     if not re.fullmatch(r'[A-Za-z0-9_-]{1,64}',str(row['store_code'])):raise ValueError('Store code must contain only letters, numbers, hyphens and underscores')
-    log('Collecting target '+str(row['store_code']));target=profile(context,maps_url(row['maps_url']),folder/'target',media_limit,identity(row['maps_url']),row.get('business_name',''),row.get('expected_address',''),progress=log);data['profiles'].append(target)
+    log('Collecting target '+str(row['store_code']));target=profile(context,maps_url(row['maps_url']),folder/'target',media_limit,identity(row['maps_url']),row.get('business_name',''),row.get('expected_address',''),progress=log,recycle=recycle);data['profiles'].append(target)
     if not target.get('name') or not target.get('entity_id') or target.get('blocker') or 'Exact profile identity mismatch' in target.get('errors',[]):
      data['identity_review_required']=True
     if row.get('business_name') and target.get('name') and row['business_name'].strip().casefold()!=target['name'].strip().casefold():data['identity_review_required']=True;data['identity_warning']='Expected/displayed business names differ; confirm branch before using comparison.'
@@ -383,12 +394,14 @@ def run(rows,out,profile_dir,headless=False,executable=None,media_limit=10,chann
     center=f"{coordinates['latitude']},{coordinates['longitude']}" if coordinates else None
     if center:log('Search location: '+center+' ('+coordinates['source']+')')
     if not data.get('identity_review_required'):
+     if recycle:recycle()
      log('Collecting keyword results');data['ranking']=rank_search(context,row['keyword'],center,folder/'ranking') if center else {'valid':False,'results':[],'blocker':'Store pin could not be resolved from this link/profile. Supply an exact profile link or fallback coordinates; no top-three cohort asserted.'}
      if data['ranking']['valid']:
       seen={target.get('entity_id')}
       for n,c in enumerate(data['ranking']['results'][:3],1):
        if c['entity_id'] in seen:continue
-       seen.add(c['entity_id']);log('Collecting competitor '+str(n));data['profiles'].append(profile(context,c['url'],folder/('competitor-'+str(n)),media_limit,c['entity_id'],progress=log))
+       if recycle:recycle()
+       seen.add(c['entity_id']);log('Collecting competitor '+str(n));data['profiles'].append(profile(context,c['url'],folder/('competitor-'+str(n)),media_limit,c['entity_id'],progress=log,recycle=recycle))
     else:data['ranking']={'valid':False,'blocker':'Target identity or collection unresolved; competitor loop not started'}
     data['ranking']['coordinate_evidence']=coordinates
     for p in data['profiles']:p['checks']=assess(p)
@@ -406,6 +419,7 @@ def run(rows,out,profile_dir,headless=False,executable=None,media_limit=10,chann
      writer=csv.writer(f);writer.writerow(['entity','entity_id','displayed_total','label_kind','observed_at','evidence','sample_items'])
      for entity in data['profiles']:
       observation=entity.get('photo_count_observation') or {};writer.writerow([entity.get('name'),entity.get('entity_id'),photo_count(entity),observation.get('label_kind','unknown'),observation.get('observed_at'),observation.get('evidence'),len(entity.get('gallery',{}).get('items',[]))])
+    if recycle:context.close()
     reports.append(data)
     export_ppt(data,folder/'audit-draft.pptx');log('PowerPoint created with captured GBP and ranking screenshots: '+str(folder))
    groups={}
