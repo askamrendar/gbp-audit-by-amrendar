@@ -1,3 +1,2 @@
-// Set apiBase to the deployed HTTPS service's /api URL after choosing hosting.
-// Leave empty to keep the existing local runner interface.
-window.GBP_AUDIT_CONFIG = {apiBase: '', hosted: false};
+// Public Render backend; no deployment secrets belong in this file.
+window.GBP_AUDIT_CONFIG = {apiBase: 'https://gbp-audit-by-amrendar.onrender.com/api', hosted: true, maxStores: 1, ephemeral: true};

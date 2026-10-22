@@ -1,6 +1,6 @@
 # Deploy the background audit service
 
-The hosted service is prepared, but no hosting account or paid service has been provisioned. GitHub Pages continues to use the local runner until a hosted endpoint is configured.
+The service is deployed at https://gbp-audit-by-amrendar.onrender.com on Render’s free plan. GitHub Pages connects to it automatically. No paid compute or persistent disk was created. Free hosting can sleep, restart or exhaust memory, and reports are temporary.
 
 ## What users see after deployment
 
@@ -45,7 +45,7 @@ Publish this configuration to Pages. Never put a deployment credential or shared
 
 Each tab receives an anonymous random session token stored in that tab's session storage. Jobs and downloads require the matching bearer token; the server stores only its hash. Other sessions cannot list or download that tab's jobs. Losing the tab/session token loses access; there is no account recovery. Do not treat anonymous sessions as enterprise account authentication.
 
-One browser audit runs at a time; at most four hosted jobs can be active/queued globally, with one active job per session. Hosted media sampling is capped at 20 items per profile. Request body limit is 5 MB; decoded spreadsheet limit is 3.5 MB. Basic per-connection-address rate limiting is included. Proxies may share one address, so test the provider's behavior; configure provider-side access/rate controls before opening high-volume public usage. No provider has been selected and no hosting costs have been authorized.
+One browser audit runs at a time; at most four hosted jobs can be active/queued globally, with one active job per session. Hosted media sampling is capped at 20 items per profile. Request body limit is 5 MB; decoded spreadsheet limit is 3.5 MB. Basic per-connection-address rate limiting is included. Proxies may share one address, so test the provider's behavior; configure provider-side access/rate controls before opening high-volume public usage. Render free hosting was selected. Paid hosting and add-ons are not authorized.
 
 Job metadata is persisted privately. On restart, interrupted jobs are marked stopped, while saved outputs remain downloadable and reports can be rebuilt. The worker runs independently of the page; closing the page does not cancel collection. Completed/failed jobs expire after the retention window. Continuous scheduled deletion, account login and horizontal scaling are not implemented.
 
@@ -64,7 +64,7 @@ python -m unittest discover -s tests
 uvicorn service:app --host 127.0.0.1 --port 8000 --workers 1
 ```
 
-The service's API tests cover session isolation, queue limits, request consent, bad uploads, file downloads, restart recovery, retention and report rebuilding. Container build/host-specific browser behavior must also be verified on the selected provider. No cloud deployment has been performed.
+The service's API tests cover session isolation, queue limits, request consent, bad uploads, file downloads, restart recovery, retention and report rebuilding. Container build/host-specific browser behavior must also be verified on the selected provider. The current Render free deployment passed its health check; see the validation log for end-to-end test coverage.
 
 ## Render deployment
 

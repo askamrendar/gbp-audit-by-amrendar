@@ -9,7 +9,7 @@ function startState(){
  $('startHint').textContent=!connected?(hosted?'Connecting to the background audit service…':'Connect the runner in step 1 before starting an audit.'):busy?'Audit running in the background. You can reopen it from Recent audits.':!$('consent').checked?'Tick the required collection approval below to enable the audit button.':'Ready. Complete the required fields, then click Audit & create PowerPoint.';
 }
 async function api(path,options={}){
- const controller=new AbortController(),timer=setTimeout(()=>controller.abort(),path.includes('/file/')?120000:30000);
+ const controller=new AbortController(),timer=setTimeout(()=>controller.abort(),path.includes('/file/')?120000:hosted&&['/session','/health'].includes(path)?90000:30000);
  try{
   const response=await fetch(base+path,{...options,signal:controller.signal,headers:{'Authorization':'Bearer '+token,...options.headers}});
   if(!response.ok){let detail;try{detail=await response.json()}catch{}const e=Error(detail?.error||detail?.detail||'Request failed ('+response.status+')');e.status=response.status;throw e;}
@@ -30,7 +30,7 @@ async function refreshHistory(){
 }
 async function connect(){
  if(!hosted){token=$('token').value.trim();$('token').removeAttribute('aria-invalid');if(!token){connected=false;$('token').setAttribute('aria-invalid','true');$('connection').textContent='Pairing code is required. Start Python runner.py and copy the code printed in its window.';$('token').focus();startState();return;}}
- $('connect').disabled=true;$('connection').textContent=hosted?'Connecting to the background service…':'Checking your local runner…';
+ $('connect').disabled=true;$('connection').textContent=hosted?'Connecting to the background service… Free hosting may need up to 90 seconds to wake up.':'Checking your local runner…';
  try{
   if(hosted&&!token){const r=await(await api('/session',{method:'POST'})).json();token=r.token;storeSession();}
   const health=await(await api('/health')).json(),[major,minor]=String(health.version||'0.0').split('.').map(Number);

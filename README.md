@@ -4,7 +4,7 @@ Extension-free, local Python browser audits with a public browser interface, key
 
 **Website:** https://askamrendar.github.io/gbp-audit-by-amrendar/
 
-**Setup-free hosted version prepared:** see [HOSTING.md](HOSTING.md). After a service is deployed, users can open its page and audit without installing Python or pairing a runner. Hosting has not been selected; the existing Pages site still uses local mode.
+**Live hosted service:** https://gbp-audit-by-amrendar.onrender.com/ — GitHub Pages connects automatically. No local Python, extension or pairing code is needed. The free Render service may take up to 90 seconds to wake, allows one store per job and uses temporary storage. Download reports promptly; restarts can remove them. See [HOSTING.md](HOSTING.md).
 
 ## Start
 
@@ -106,6 +106,6 @@ A disabled audit button means the runner is disconnected, collection approval is
 
 ## Background service and export recovery (v1.3)
 
-The deployable Docker service provides anonymous per-tab sessions, a bounded background queue, headless Chromium, private job history, persisted reports and 24-hour terminal-job retention. It serves the interface itself; Pages can also connect through `docs/config.js` after deployment. See [HOSTING.md](HOSTING.md) for setup, limits and validation. No hosted endpoint is enabled in the public configuration yet.
+The deployable Docker service provides anonymous per-tab sessions, a bounded background queue, headless Chromium, private job history, persisted reports and 24-hour terminal-job retention. It serves the interface itself; Pages can also connect through `docs/config.js` after deployment. See [HOSTING.md](HOSTING.md) for setup, limits and validation. The public configuration now points to the free Render endpoint.
 
 Both modes offer **Recent audits** and **Rebuild PowerPoint from saved data**. Local mode restores saved jobs when the runner restarts. Exports use explicit download headers and validate the PowerPoint ZIP before packaging. Browser downloads report empty/invalid files and transfer errors. Rebuilding a report does not repeat Google collection.
