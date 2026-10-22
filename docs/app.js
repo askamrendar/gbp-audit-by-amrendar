@@ -82,7 +82,7 @@ async function poll(id){
    refreshHistory();return;
   }
   pollTimer=setTimeout(()=>poll(id),2500);
- }catch(e){busy=false;connected=false;startState();$('connection').textContent='Connection lost. Reconnect to recover audit progress.';$('error').textContent='Progress could not be loaded. Reconnect or reopen the app and use Recent audits. Do not start a duplicate job.';}
+ }catch(e){busy=false;if(e.status===404){activeJob='';connected=true;$('jobStatus').textContent='Audit unavailable · job expired or service restarted';$('error').textContent='This saved job is no longer available. Free hosting can lose jobs on restart. You can start a new audit.';$('rebuild').hidden=true;refreshHistory();}else{connected=false;$('connection').textContent='Connection lost. Reconnect to recover audit progress.';$('error').textContent='Progress could not be loaded. Reconnect or reopen the app and use Recent audits. Do not start a duplicate job.';}startState();}
 }
 $('rebuild').onclick=async()=>{
  if(!activeJob)return;$('rebuild').disabled=true;$('exportStatus').textContent='Rebuilding reports from saved data…';
@@ -98,5 +98,5 @@ if(hosted){
  $('bulkLimit').textContent='Hosted limit: '+(config.maxStores||10)+' store(s) per job / 3.5 MB file. Reports and screenshots are processed on the hosted service.';
  $('consentText').textContent='I approve public browser collection and screenshots on the hosted service. This does not edit profiles or bypass access blocks.';
  $('resultHelp').textContent='Collection and PowerPoint generation run automatically in the background. Reopen this app in the same tab and use Recent audits to recover progress and downloads. Download files promptly; on free hosting they can be lost after a restart.';
- connect();
+ startState();connect();
 }

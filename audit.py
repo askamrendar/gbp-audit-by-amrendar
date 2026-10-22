@@ -341,7 +341,10 @@ def run(rows,out,profile_dir,headless=False,executable=None,media_limit=10,chann
  with sync_playwright() as pw:
   args=dict(user_data_dir=str(profile_dir),headless=headless,viewport={'width':1280,'height':900},locale='en-GB')
   if executable:args['executable_path']=executable
-  else:args['channel']=channel
+  elif channel!='chromium':args['channel']=channel
+  # Use Playwright's bundled headless shell for hosted Chromium jobs, reducing
+  # memory overhead while preserving normal multiprocess browser isolation.
+  if headless and channel=='chromium':args['args']=['--renderer-process-limit=2']
   context=pw.chromium.launch_persistent_context(**args)
   # No access to private/local network destinations; no profile mutation UI is invoked.
   def route(req):
