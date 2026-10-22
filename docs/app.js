@@ -95,6 +95,7 @@ if(hosted){
  try{token=sessionStorage.getItem(sessionKey)||'';}catch{}
  $('setupIntro').innerHTML='<span class="step">01 / READY</span><h2>Your audit runs in the background</h2><p>No Python, extensions or local setup. Enter your store link and keyword below. Reopen audits from Recent audits in this browser tab. Download reports you want to keep. Reports may expire or be lost when a free service restarts.</p>';
  for(const element of [$('token'),$('connect'),document.querySelector('label[for=token]')])element.hidden=true;
+ if(config.ephemeral){const warning=document.createElement('p');warning.className='serviceWarning';warning.textContent='Free Render preview: our full audit test exceeded the 512 MB memory limit. Audits can stop before keyword comparisons or PowerPoint export. Full audits are currently unreliable on this plan.';$('setupIntro').append(warning);}
  $('retryConnection').hidden=false;mediaLimit(config.maxMedia??20);
  $('bulkLimit').textContent='Hosted limit: '+(config.maxStores||10)+' store(s) per job / 3.5 MB file. Reports and screenshots are processed on the hosted service.';
  $('consentText').textContent='I approve public browser collection and screenshots on the hosted service. This does not edit profiles or bypass access blocks.';

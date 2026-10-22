@@ -3,3 +3,5 @@
 .required{color:#9f3428;font-weight:800}.connect input[aria-invalid=true]{border-color:#9f3428}#connection{overflow-wrap:anywhere}button:focus-visible,input:focus-visible{outline:3px solid #779bde;outline-offset:3px}
 
 #recentAudits{display:flex;flex-wrap:wrap;gap:10px}#rebuild{margin-top:16px;background:#eef1eb;color:var(--ink)}#exportStatus{overflow-wrap:anywhere}
+
+.serviceWarning{padding:14px;border:1px solid #bb5b36;border-radius:8px;background:#fff1e9;color:#7a2c16;font-size:14px}
