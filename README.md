@@ -97,3 +97,7 @@ Upgrading to v1.2: download the latest source, update dependencies if needed, an
 Findings appear beside the actual profile and ranking screenshots. Competitor tables include displayed photo totals, clearly separated from samples. Missing values and unmeasured rankings remain explicit. Full form criteria and linked-page details remain in slide notes, CSV and JSON so the client slides stay concise. The action plan combines one-time setup and recurring work, then sequences it across 30 days. Suggested posts, photos and WhatsApp availability are opportunities, not proven causes of a ranking difference. Profile changes still require business approval.
 
 Bulk jobs also produce one combined PowerPoint per keyword/measurement-method group. Invalid or unmeasured ranks follow measured and censored results; they are never assigned a numeric rank.
+
+## Connection help
+
+A disabled audit button means the runner is disconnected, collection approval is unchecked, or an audit is already running. Start `python runner.py`, keep that window open, paste its current pairing code and click **Connect runner**. Then tick collection approval. Fields marked * are required: pairing code, store code, Maps link and keyword (or a CSV/XLSX file in bulk mode), plus approval. Expected name/address/phone and branding are optional. Wrong codes are reported separately from network failures. Use the local interface at http://127.0.0.1:8765 if the public page cannot reach your runner. Reconnecting within the same open page resumes progress checks for its active job.
