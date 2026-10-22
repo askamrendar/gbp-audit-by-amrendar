@@ -59,6 +59,8 @@ class Handler(BaseHTTPRequestHandler):
   path=urllib.parse.urlparse(self.path).path
   if path in ['/','/index.html','/app.js','/style.css','/template.csv','/config.js']:
    if self.headers.get('Host')!=f'127.0.0.1:{PORT}':return self.json_(403,{'error':'Host rejected'})
+   if path=='/config.js':
+    self.headers_(200,'application/javascript');self.end_headers();self.wfile.write(b"window.GBP_AUDIT_CONFIG = {apiBase: '', hosted: false};");return
    name='index.html' if path=='/' else path[1:];f=BASE/'docs'/name
    types={'.html':'text/html; charset=utf-8','.js':'text/javascript','.css':'text/css','.csv':'text/csv'}
    self.headers_(200,types.get(f.suffix,'text/plain'));self.end_headers();self.wfile.write(f.read_bytes());return

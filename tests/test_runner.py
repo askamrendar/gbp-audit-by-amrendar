@@ -22,6 +22,8 @@ class RunnerTests(unittest.TestCase):
   with self.assertRaises(urllib.error.HTTPError):self.request('/health',origin='https://evil.test')
  def test_paired_health(self):self.assertTrue(json.load(self.request('/health'))['ready'])
  def test_static_interface(self):self.assertIn(b'GBP Audit by Amrendar',urllib.request.urlopen(self.url).read())
+ def test_local_interface_keeps_local_processing(self):
+  config=urllib.request.urlopen(self.url+'/config.js').read();self.assertIn(b'hosted: false',config);self.assertNotIn(b'onrender.com',config)
  def test_consent_required(self):
   with self.assertRaises(urllib.error.HTTPError) as c:self.request('/jobs',data={'consent':False})
   self.assertEqual(c.exception.code,400)

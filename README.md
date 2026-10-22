@@ -1,12 +1,16 @@
 # GBP Audit by Amrendar
 
-Extension-free, local Python browser audits with a public browser interface, keyword competitor comparison and editable PowerPoint reports.
+Browser-based GBP audits with background collection, keyword competitor comparison and editable PowerPoint reports. Hosted and optional local processing are supported.
 
 **Website:** https://askamrendar.github.io/gbp-audit-by-amrendar/
 
 **Live hosted service:** https://gbp-audit-by-amrendar.onrender.com/ — GitHub Pages connects automatically. No local Python, extension or pairing code is needed. The free Render service may take up to 90 seconds to wake, allows one store per job and uses temporary storage. Download reports promptly; restarts can remove them. See [HOSTING.md](HOSTING.md).
 
-## Start
+## Use the hosted app
+
+Open the website, enter a store Maps link and keyword, approve collection, then start. The app connects to Render automatically and generates reports. The free service supports one store at a time with gallery sampling disabled; private and gallery-dependent checks remain unresolved.
+
+## Optional local mode
 
 Install Python 3.11+ and Google Chrome. Download or clone this repository, open its folder in a terminal, then:
 
@@ -19,9 +23,9 @@ python runner.py
 
 Windows: `py -m venv .venv`, then `.venv\Scripts\activate`.
 
-Open the website or `http://127.0.0.1:8765`, enter the pairing code printed by the runner, and approve read-only collection. Chrome may ask to allow local network access for the public website. If the browser prevents this, use the local interface; do not disable browser security.
+For local processing, open `http://127.0.0.1:8765`, enter the pairing code printed by the runner, and approve read-only collection. Chrome may ask to allow local network access for the public website. If the browser prevents this, use the local interface; do not disable browser security.
 
-The public site is static. **Every user needs their own running Python process. GitHub Pages cannot execute Python or control Chrome.** No browser extension, Google password or paid API is required. The runner opens a separate persistent Chrome audit profile, not an existing personal tab/profile. Keep its window open until the job completes. The website pairing code stays in page memory and changes when the runner restarts.
+GitHub Pages serves the public interface and Render executes hosted jobs. **Only local mode requires your own running Python process.** No browser extension, Google password or paid API is required. The runner opens a separate persistent Chrome audit profile, not an existing personal tab/profile. Keep its window open until the job completes. The website pairing code stays in page memory and changes when the runner restarts.
 
 ## What runs
 

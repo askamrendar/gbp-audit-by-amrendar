@@ -171,8 +171,9 @@ def parse_photo_label(label):
  if not m:return None
  return {'raw_label':label,'total':int(m[1].replace(',','')),'label_kind':'media' if re.search(r'video|media',m[2],re.I) else 'photos'}
 
-def profile(context,url,folder,media_limit,expected_id=None,expected_name='',expected_address=''):
+def profile(context,url,folder,media_limit,expected_id=None,expected_name='',expected_address='',progress=None):
  page=context.new_page();result={'requested_url':url,'attempted_at':now(),'errors':[]}
+ if progress:progress('Opening the public Maps profile')
  try:
   page.goto(normalize_search_link(url),wait_until='domcontentloaded',timeout=30000);settle(page)
   normalized=normalize_search_link(page.url)
@@ -180,6 +181,7 @@ def profile(context,url,folder,media_limit,expected_id=None,expected_name='',exp
   if blocked(page):result.update(blocker=blocked(page),evidence=capture(page,folder,'blocked'));return result
   issue=resolve_profile_page(page,expected_name,expected_address)
   if issue:result.update(blocker=issue,evidence=capture(page,folder,'unresolved'));return result
+  if progress:progress('Business panel resolved; capturing profile evidence')
   result['profile_url']=page.url
   result['coordinates']=pin_coordinates(page.url)
   result.update(capture(page,folder,'profile'));result['entity_id']=identity(page.url) or identity(url)
@@ -239,10 +241,15 @@ def profile(context,url,folder,media_limit,expected_id=None,expected_name='',exp
    if missing.count():
     try:missing.first.scroll_into_view_if_needed();result['details_evidence']=capture(page,folder,'profile-details')
     except Exception:result['errors'].append('Website gap screenshot unavailable')
+  if progress:progress('Profile details captured')
   result['attribute_observation']={'body':result.get('about_evidence',{}).get('body'),'state':'captured_needs_review' if result.get('about_evidence') else 'not_exposed','accuracy':'Operational truth not confirmed'}
   if media_limit:result['gallery']=gallery(page,folder,media_limit)
   result['resolved_url']=page.url
   if result['website']:
+   # All GBP evidence is saved; release the Maps renderer before opening a
+   # linked site so the free worker never keeps both heavy pages alive.
+   page.close()
+   if progress:progress('Maps page closed; inspecting the linked website')
    wp=context.new_page()
    try:
     result['website_audit']=website(wp,result['website'],folder,'website')
@@ -253,7 +260,8 @@ def profile(context,url,folder,media_limit,expected_id=None,expected_name='',exp
      if link['href']!=wp.url:result['supplementary_pages'].append(website(wp,link['href'],folder,'supplement-'+str(n+1)))
    finally:wp.close()
  except Exception as exc:result['errors'].append(type(exc).__name__+': profile collection interrupted')
- finally:page.close()
+ finally:
+  if not page.is_closed():page.close()
  return result
 
 def lookup_coordinates(context,target,folder):
@@ -358,7 +366,7 @@ def run(rows,out,profile_dir,headless=False,executable=None,media_limit=10,chann
     if not str(row.get('keyword','')).strip():raise ValueError('Keyword is required')
     folder=out/(str(row['store_code'])+'-'+hashlib.sha256(row['keyword'].encode()).hexdigest()[:8]+'-'+dt.datetime.now(dt.timezone.utc).strftime('%Y%m%dT%H%M%S%fZ'));folder.mkdir(exist_ok=True);data={'input':row,'started_at':now(),'profiles':[],'brand':brand or {}}
     if not re.fullmatch(r'[A-Za-z0-9_-]{1,64}',str(row['store_code'])):raise ValueError('Store code must contain only letters, numbers, hyphens and underscores')
-    log('Collecting target '+str(row['store_code']));target=profile(context,maps_url(row['maps_url']),folder/'target',media_limit,identity(row['maps_url']),row.get('business_name',''),row.get('expected_address',''));data['profiles'].append(target)
+    log('Collecting target '+str(row['store_code']));target=profile(context,maps_url(row['maps_url']),folder/'target',media_limit,identity(row['maps_url']),row.get('business_name',''),row.get('expected_address',''),progress=log);data['profiles'].append(target)
     if not target.get('name') or not target.get('entity_id') or target.get('blocker') or 'Exact profile identity mismatch' in target.get('errors',[]):
      data['identity_review_required']=True
     if row.get('business_name') and target.get('name') and row['business_name'].strip().casefold()!=target['name'].strip().casefold():data['identity_review_required']=True;data['identity_warning']='Expected/displayed business names differ; confirm branch before using comparison.'
@@ -380,7 +388,7 @@ def run(rows,out,profile_dir,headless=False,executable=None,media_limit=10,chann
       seen={target.get('entity_id')}
       for n,c in enumerate(data['ranking']['results'][:3],1):
        if c['entity_id'] in seen:continue
-       seen.add(c['entity_id']);log('Collecting competitor '+str(n));data['profiles'].append(profile(context,c['url'],folder/('competitor-'+str(n)),media_limit,c['entity_id']))
+       seen.add(c['entity_id']);log('Collecting competitor '+str(n));data['profiles'].append(profile(context,c['url'],folder/('competitor-'+str(n)),media_limit,c['entity_id'],progress=log))
     else:data['ranking']={'valid':False,'blocker':'Target identity or collection unresolved; competitor loop not started'}
     data['ranking']['coordinate_evidence']=coordinates
     for p in data['profiles']:p['checks']=assess(p)
