@@ -1,6 +1,6 @@
 #!/usr/bin/env python3
 """Local, extension-free, read-only GBP audit runner. See README for coverage limits."""
-import argparse,csv,datetime as dt,hashlib,html,ipaddress,json,pathlib,re,socket,sys,time
+import argparse,csv,datetime as dt,gc,hashlib,html,ipaddress,json,pathlib,re,socket,sys,tempfile,time
 from urllib.parse import urlparse,quote,unquote,parse_qs
 BASE=pathlib.Path(__file__).resolve().parent
 
@@ -123,12 +123,14 @@ def website(page,url,folder,stem):
  if not public_url(url):return {'requested_url':url,'error':'Non-public or invalid website destination not opened'}
  try:
   response=page.goto(url,wait_until='domcontentloaded',timeout=30000);page.locator('body').wait_for(timeout=10000)
-  data=page.evaluate('''() => ({title:document.title,canonical:document.querySelector('link[rel="canonical"]')?.href,robots:document.querySelector('meta[name="robots"]')?.content,description:document.querySelector('meta[name="description"]')?.content,headings:Array.from(document.querySelectorAll('h1,h2,h3')).map(e=>({tag:e.tagName,text:e.innerText})),jsonld:Array.from(document.querySelectorAll('script[type="application/ld+json"]')).map(e=>e.textContent),iframes:Array.from(document.querySelectorAll('iframe')).map(e=>({src:e.src,title:e.title})),links:Array.from(document.querySelectorAll('a[href]')).map(e=>({text:e.innerText,href:e.href})),body:document.body.innerText})''')
+  data=page.evaluate('''() => ({title:document.title,canonical:document.querySelector('link[rel="canonical"]')?.href,robots:document.querySelector('meta[name="robots"]')?.content,description:document.querySelector('meta[name="description"]')?.content,headings:Array.from(document.querySelectorAll('h1,h2,h3')).map(e=>({tag:e.tagName,text:e.innerText})),jsonld:Array.from(document.querySelectorAll('script[type="application/ld+json"]')).map(e=>e.textContent),iframes:Array.from(document.querySelectorAll('iframe')).map(e=>({src:e.src,title:e.title})),links:Array.from(document.querySelectorAll('a[href]')).map(e=>({text:e.innerText,href:e.href}))})''')
   data.update(capture(page,folder,stem),requested_url=url,status_code=response.status if response else None)
   data['schema']=[]
   for raw in data['jsonld']:
    try:data['schema'].append({'syntax':'parsed','value':json.loads(raw)})
    except ValueError:data['schema'].append({'syntax':'invalid'})
+  # Parsed schema is retained; avoid keeping a second raw copy in every report.
+  data.pop('jsonld',None)
   data['page_type']='locator' if re.search(r'store.?locator|our.?stores',page.url,re.I) else 'homepage' if urlparse(page.url).path in ['/',''] else 'other page; branch identity needs review'
   data['embed_assessment']='Iframe inventory collected; review/social embed identity and actual rendered content require review. Social links alone are not embeds.'
   return data
@@ -347,14 +349,17 @@ def run(rows,out,profile_dir,headless=False,executable=None,media_limit=10,chann
  out=pathlib.Path(out).resolve();out.mkdir(parents=True,exist_ok=True);profile_dir=pathlib.Path(profile_dir).resolve()
  normal=pathlib.Path.home()/'Library/Application Support/Google/Chrome'
  if profile_dir==normal or normal in profile_dir.parents:raise ValueError('Use the separate audit browser directory, not your regular Chrome profile')
- with sync_playwright() as pw:
+ pw=sync_playwright().start()
+ try:
   args=dict(user_data_dir=str(profile_dir),headless=headless,viewport={'width':1280,'height':900},locale='en-GB')
   if executable:args['executable_path']=executable
   elif channel!='chromium':args['channel']=channel
   # Use Playwright's bundled headless shell for hosted Chromium jobs, reducing
   # memory overhead while preserving normal multiprocess browser isolation.
-  if headless and channel=='chromium':args['args']=['--renderer-process-limit=2','--disable-gpu','--disable-webgl','--js-flags=--max-old-space-size=160']
-  context=None
+  if headless and channel=='chromium':args['args']=['--renderer-process-limit=2','--disable-gpu','--disable-webgl','--js-flags=--max-old-space-size=128']
+  context=None;stage_dir=None
+  hosted_browser=headless and channel=='chromium'
+  profile_dir.mkdir(parents=True,exist_ok=True)
   # No access to private/local network destinations; no profile mutation UI is invoked.
   def route(req):
    u=urlparse(req.request.url)
@@ -363,8 +368,19 @@ def run(rows,out,profile_dir,headless=False,executable=None,media_limit=10,chann
   # Closing a tab alone can retain browser/GPU caches. Hosted collections
   # restart the browser between stages; saved screenshots and facts stay on disk.
   def fresh_context():
-   nonlocal context
-   if context is not None:context.close()
+   nonlocal context,pw,stage_dir
+   if context is not None:
+    context.close()
+    if hosted_browser:
+     # The Playwright driver also retains protocol/DOM buffers. Stop the
+     # whole runtime, not just Chrome, before the next independent stage.
+     pw.stop()
+     if stage_dir:stage_dir.cleanup()
+     gc.collect()
+     pw=sync_playwright().start()
+   if hosted_browser:
+    stage_dir=tempfile.TemporaryDirectory(prefix='stage-',dir=profile_dir)
+    args['user_data_dir']=stage_dir.name
    context=pw.chromium.launch_persistent_context(**args)
    context.route('**/*',route)
    return context
@@ -427,7 +443,11 @@ def run(rows,out,profile_dir,headless=False,executable=None,media_limit=10,chann
    for (keyword,method),group in groups.items():
     if len(group)>1:
      output=out/('all-stores-'+hashlib.sha256((keyword+method).encode()).hexdigest()[:8]+'.pptx');export_portfolio(group,output);log('Combined rank-ordered report saved: '+str(output))
-  finally:context.close()
+  finally:
+   if context is not None:context.close()
+ finally:
+  pw.stop()
+  if 'stage_dir' in locals() and stage_dir:stage_dir.cleanup()
  return str(out)
 
 def main():

@@ -1,5 +1,5 @@
 FROM python:3.12-slim-bookworm
-ENV PYTHONUNBUFFERED=1 PLAYWRIGHT_BROWSERS_PATH=/opt/browsers AUDIT_DATA_DIR=/data PORT=8000
+ENV NODE_OPTIONS=--max-old-space-size=96 PYTHONUNBUFFERED=1 PLAYWRIGHT_BROWSERS_PATH=/opt/browsers AUDIT_DATA_DIR=/data PORT=8000
 WORKDIR /app
 COPY requirements-service.txt requirements.txt ./
 RUN pip install --no-cache-dir -r requirements-service.txt && python -m playwright install --with-deps chromium && chmod -R a+rX /opt/browsers
