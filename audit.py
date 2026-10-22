@@ -56,6 +56,11 @@ def resolve_profile_page(page,expected_name='',expected_address=''):
   heading=page.locator('h1')
   return bool(identity(page.url) and heading.count() and heading.first.inner_text().strip() and not page.locator('[role="feed"]').count())
  if selected():return None
+ # Short-link redirects can finish before the business panel has hydrated.
+ # Waiting for a generic search h1 previously caused false identity failures.
+ try:page.wait_for_function("document.querySelector('h1.DUwDvf')?.innerText.trim() || (location.pathname.includes('/maps/place/') && document.querySelector('h1')?.innerText.trim() && !document.querySelector('[role=feed]')) || document.querySelector('[role=feed] a[href*=\"/maps/place/\"]')",timeout=15000)
+ except Exception:pass
+ if selected():return None
  links=page.locator('a[href*="/maps/place/"],a[href*="maps?cid="],a[href*="maps/search/?"]')
  try:links.first.wait_for(timeout=10000)
  except Exception:return 'No unique business profile exposed by this link; supply its exact Maps profile link'

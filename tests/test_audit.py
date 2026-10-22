@@ -32,4 +32,13 @@ class Tests(unittest.TestCase):
  def test_bulk_order_preserved(self):
   with tempfile.TemporaryDirectory() as d:
    p=pathlib.Path(d)/'a.csv';p.write_text('store_code,maps_url,keyword\nB,https://www.google.com/maps?cid=123,shoe\nA,https://www.google.com/maps?cid=456,sneaker\n');self.assertEqual([x['store_code'] for x in load_rows(p)],['B','A'])
+ def test_wait_for_business_panel_after_short_link_redirect(self):
+  from unittest.mock import MagicMock
+  from audit import resolve_profile_page
+  page=MagicMock();page.url='https://www.google.com/maps/place/Example/data=!1s0x1:0x2';ready=[False]
+  def locator(selector):
+   loc=MagicMock();loc.count.return_value=int(ready[0] and selector in ['h1.DUwDvf','h1']);loc.first.inner_text.return_value='Example';return loc
+  page.locator.side_effect=locator;page.wait_for_function.side_effect=lambda *a,**k:ready.__setitem__(0,True)
+  self.assertIsNone(resolve_profile_page(page));page.goto.assert_not_called()
+
 if __name__=='__main__':unittest.main()

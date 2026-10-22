@@ -1,0 +1,12 @@
+*
+!Dockerfile
+!requirements*.txt
+!audit.py
+!media_audit.py
+!report.py
+!runner.py
+!job_support.py
+!service.py
+!checklist.json
+!docs/
+!docs/**

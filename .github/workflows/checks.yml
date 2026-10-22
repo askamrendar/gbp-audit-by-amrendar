@@ -1,0 +1,30 @@
+name: Application checks
+on: [push, pull_request]
+permissions:
+  contents: read
+jobs:
+  test:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.12'
+      - run: pip install -r requirements-service.txt httpx
+      - run: python -m unittest discover -s tests
+      - run: node --check docs/app.js
+      - name: Build deployable service
+        run: docker build -t gbp-audit-test .
+      - name: Verify bundled headless browser
+        run: >-
+          docker run --rm --shm-size=1g gbp-audit-test python -c
+          "from playwright.sync_api import sync_playwright; p=sync_playwright().start(); b=p.chromium.launch(headless=True); b.close(); p.stop(); print('Headless browser ready')"
+      - name: Verify service startup
+        run: |
+          docker run -d --name audit-service-test -p 8000:8000 gbp-audit-test
+          for attempt in $(seq 1 30); do
+            if curl -fsS http://127.0.0.1:8000/api/health; then exit 0; fi
+            sleep 1
+          done
+          docker logs audit-service-test
+          exit 1

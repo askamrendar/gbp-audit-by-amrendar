@@ -4,6 +4,8 @@ Extension-free, local Python browser audits with a public browser interface, key
 
 **Website:** https://askamrendar.github.io/gbp-audit-by-amrendar/
 
+**Setup-free hosted version prepared:** see [HOSTING.md](HOSTING.md). After a service is deployed, users can open its page and audit without installing Python or pairing a runner. Hosting has not been selected; the existing Pages site still uses local mode.
+
 ## Start
 
 Install Python 3.11+ and Google Chrome. Download or clone this repository, open its folder in a terminal, then:
@@ -101,3 +103,9 @@ Bulk jobs also produce one combined PowerPoint per keyword/measurement-method gr
 ## Connection help
 
 A disabled audit button means the runner is disconnected, collection approval is unchecked, or an audit is already running. Start `python runner.py`, keep that window open, paste its current pairing code and click **Connect runner**. Then tick collection approval. Fields marked * are required: pairing code, store code, Maps link and keyword (or a CSV/XLSX file in bulk mode), plus approval. Expected name/address/phone and branding are optional. Wrong codes are reported separately from network failures. Use the local interface at http://127.0.0.1:8765 if the public page cannot reach your runner. Reconnecting within the same open page resumes progress checks for its active job.
+
+## Background service and export recovery (v1.3)
+
+The deployable Docker service provides anonymous per-tab sessions, a bounded background queue, headless Chromium, private job history, persisted reports and 24-hour terminal-job retention. It serves the interface itself; Pages can also connect through `docs/config.js` after deployment. See [HOSTING.md](HOSTING.md) for setup, limits and validation. No hosted endpoint is enabled in the public configuration yet.
+
+Both modes offer **Recent audits** and **Rebuild PowerPoint from saved data**. Local mode restores saved jobs when the runner restarts. Exports use explicit download headers and validate the PowerPoint ZIP before packaging. Browser downloads report empty/invalid files and transfer errors. Rebuilding a report does not repeat Google collection.

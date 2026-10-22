@@ -12,17 +12,22 @@ PORT=8765
 ROOT=BASE/'runs'
 ALLOWED={'https://askamrendar.github.io'}
 
-def validate_rows(rows):
- if not isinstance(rows,list) or not 1<=len(rows)<=100:raise ValueError('Supply 1–100 stores per run')
- for row in rows:
-  if not isinstance(row,dict):raise ValueError('Each store must be a record')
-  if not audit.re.fullmatch(r'[A-Za-z0-9_-]{1,64}',str(row.get('store_code',''))):raise ValueError('Store code: use letters, numbers, hyphens or underscores')
-  audit.maps_url(str(row.get('maps_url','')))
-  if not 1<=len(str(row.get('keyword','')).strip())<=200:raise ValueError('A keyword is required (up to 200 characters)')
-  if bool(str(row.get('search_latitude') if row.get('search_latitude') is not None else '').strip())!=bool(str(row.get('search_longitude') if row.get('search_longitude') is not None else '').strip()):raise ValueError('Supply both search coordinates together')
-  for key,lo,hi in [('search_latitude',-90,90),('search_longitude',-180,180)]:
-   if row.get(key) not in [None,''] and not lo<=float(row[key])<=hi:raise ValueError('Invalid search coordinates')
- return rows
+from job_support import validate_rows,prepare_payload,package_outputs,files_for,rebuild_reports
+
+def save_job(jid):
+ folder=ROOT/jid;folder.mkdir(parents=True,exist_ok=True)
+ temporary=folder/'job-state.tmp';temporary.write_text(json.dumps(JOBS[jid]));temporary.replace(folder/'job-state.json')
+
+def recover_jobs():
+ if not ROOT.exists():return
+ for folder in ROOT.iterdir():
+  if not folder.is_dir() or not audit.re.fullmatch('[a-f0-9]{24}',folder.name):continue
+  try:
+   state=folder/'job-state.json'
+   job=json.loads(state.read_text()) if state.is_file() else {'id':folder.name,'messages':['Recovered saved audit outputs'],'status':'completed' if (folder/'audit-results.zip').is_file() else 'failed'}
+   if job['status'] in ['queued','running']:job['status']='failed';job.setdefault('messages',[]).append('Runner restarted. Saved data can be used to rebuild reports.')
+   job['files']=files_for(folder);JOBS[folder.name]=job
+  except (OSError,ValueError,KeyError):continue
 
 def work(jid,rows,media,brand):
  job=JOBS[jid];job['status']='running';folder=ROOT/jid
@@ -30,13 +35,10 @@ def work(jid,rows,media,brand):
   def log(msg):
    with LOCK:job['messages'].append(msg)
   audit.run(rows,folder,BASE/'.audit-browser',media_limit=media,log=log,brand=brand)
-  archive=folder/'audit-results.zip'
-  with zipfile.ZipFile(archive,'w',zipfile.ZIP_DEFLATED) as z:
-   for f in folder.rglob('*'):
-    if f.is_file() and f!=archive:z.write(f,f.relative_to(folder))
-  job['files']=[str(f.relative_to(folder)) for f in folder.rglob('*') if f.is_file() and f.suffix in ['.pptx','.zip','.csv','.json']]
-  job['status']='completed'
- except Exception as e:job['status']='failed';job['messages'].append(str(e))
+  job['files']=package_outputs(folder);job['status']='completed'
+ except Exception as e:
+  job['status']='failed';job['messages'].append('Audit/export stopped: '+str(e));job['files']=files_for(folder)
+ finally:save_job(jid)
 
 class Handler(BaseHTTPRequestHandler):
  def log_message(self,*args):pass
@@ -55,13 +57,14 @@ class Handler(BaseHTTPRequestHandler):
   self.headers_(204);self.send_header('Access-Control-Allow-Methods','GET, POST, OPTIONS');self.send_header('Access-Control-Allow-Headers','Authorization, Content-Type');self.send_header('Access-Control-Allow-Private-Network','true');self.end_headers()
  def do_GET(self):
   path=urllib.parse.urlparse(self.path).path
-  if path in ['/','/index.html','/app.js','/style.css','/template.csv']:
+  if path in ['/','/index.html','/app.js','/style.css','/template.csv','/config.js']:
    if self.headers.get('Host')!=f'127.0.0.1:{PORT}':return self.json_(403,{'error':'Host rejected'})
    name='index.html' if path=='/' else path[1:];f=BASE/'docs'/name
    types={'.html':'text/html; charset=utf-8','.js':'text/javascript','.css':'text/css','.csv':'text/csv'}
    self.headers_(200,types.get(f.suffix,'text/plain'));self.end_headers();self.wfile.write(f.read_bytes());return
   if not self.auth():return self.json_(403,{'error':'Connect using the pairing code shown by your local runner'})
-  if path=='/health':return self.json_(200,{'name':'GBP Audit by Amrendar','version':'1.2','ready':True})
+  if path=='/jobs':return self.json_(200,{'jobs':list(JOBS.values())[-20:][::-1]})
+  if path=='/health':return self.json_(200,{'name':'GBP Audit by Amrendar','version':'1.3','ready':True})
   parts=path.strip('/').split('/')
   if len(parts)>=2 and parts[0]=='jobs' and parts[1] in JOBS:
    job=JOBS[parts[1]]
@@ -69,59 +72,39 @@ class Handler(BaseHTTPRequestHandler):
    if len(parts)==4 and parts[2]=='file':
     name=urllib.parse.unquote(parts[3]);folder=(ROOT/parts[1]).resolve();f=(folder/name).resolve()
     if folder not in f.parents or not f.is_file() or name not in job.get('files',[]):return self.json_(404,{'error':'Unknown output'})
-    self.headers_(200,'application/octet-stream');self.end_headers();self.wfile.write(f.read_bytes());return
+    mime='application/vnd.openxmlformats-officedocument.presentationml.presentation' if f.suffix=='.pptx' else 'application/zip' if f.suffix=='.zip' else 'application/octet-stream'
+    self.headers_(200,mime);self.send_header('Content-Length',str(f.stat().st_size));self.send_header('Content-Disposition',"attachment; filename*=UTF-8''"+urllib.parse.quote(f.name));self.end_headers()
+    import shutil
+    with f.open('rb') as stream:shutil.copyfileobj(stream,self.wfile)
+    return
   return self.json_(404,{'error':'Not found'})
  def do_POST(self):
   if not self.auth():return self.json_(403,{'error':'Origin or pairing code rejected'})
+  parts=self.path.strip('/').split('/')
+  if len(parts)==3 and parts[0]=='jobs' and parts[2]=='export' and parts[1] in JOBS:
+   jid=parts[1]
+   if any(j['status'] in ['queued','running'] for j in JOBS.values()):return self.json_(409,{'error':'Wait for the active audit to finish'})
+   try:
+    JOBS[jid]['files']=rebuild_reports(ROOT/jid);JOBS[jid]['status']='completed';JOBS[jid]['messages'].append('Reports rebuilt from saved audit data; Google was not queried again.');save_job(jid);return self.json_(200,JOBS[jid])
+   except Exception as exc:return self.json_(400,{'error':'Report rebuild failed: '+str(exc)})
   if self.path!='/jobs':return self.json_(404,{'error':'Not found'})
   try:
    size=int(self.headers.get('Content-Length','0'))
    if not 0<size<=5000000:raise ValueError('Upload must be smaller than 5 MB')
    body=json.loads(self.rfile.read(size))
-   if body.get('consent') is not True:raise ValueError('Approve public read-only auditing first')
    with LOCK:
     if any(j['status'] in ['queued','running'] for j in JOBS.values()):raise ValueError('An audit is already running. Wait for it to finish.')
-   if body.get('file'):
-    raw=base64.b64decode(body['file'],validate=True);ext=body.get('extension')
-    if ext not in ['csv','xlsx']:raise ValueError('Use CSV or XLSX')
-    import tempfile
-    with tempfile.TemporaryDirectory() as tmp:
-     p=pathlib.Path(tmp)/('upload.'+ext);p.write_bytes(raw)
-     if ext=='xlsx':
-      with zipfile.ZipFile(p) as z:
-       if sum(x.file_size for x in z.infolist())>30000000:raise ValueError('Expanded workbook is too large')
-     rows=audit.load_rows(p)
-   else:rows=body.get('rows')
-   rows=validate_rows(rows);media=int(body.get('media_limit',10))
-   if not 0<=media<=50:raise ValueError('Media sample must be 0–50')
-   brand=body.get('brand') or {};brand={k:str(brand.get(k,''))[:100] for k in ['client','color','accent','agency']}
-   if brand['color'] and not audit.re.fullmatch('#[0-9a-fA-F]{6}',brand['color']):raise ValueError('Use a hex brand colour')
-   if brand['accent'] and not audit.re.fullmatch('#[0-9a-fA-F]{6}',brand['accent']):raise ValueError('Use a hex accent colour')
-   logo=body.get('logo')
-   logo_bytes=None
-   if logo:
-    import io
-    from PIL import Image
-    logo_bytes=base64.b64decode(logo,validate=True)
-    if len(logo_bytes)>1000000:raise ValueError('Logo must be below 1 MB')
-    try:
-     im=Image.open(io.BytesIO(logo_bytes))
-    except Exception as exc:raise ValueError('Invalid or oversized logo image') from exc
-    with im:
-     if im.format not in ['PNG','JPEG'] or im.width*im.height>16000000:raise ValueError('Use a PNG or JPEG logo below 16 megapixels')
-     im.verify()
-   jid=secrets.token_hex(12)
-   if logo_bytes:
-    local=ROOT/jid/'branding';local.mkdir(parents=True);logo_path=local/'agency-logo.png'
-    with Image.open(io.BytesIO(logo_bytes)) as im:im.convert('RGBA').save(logo_path,'PNG')
-    brand['logo_path']=str(logo_path)
-   JOBS[jid]={'id':jid,'status':'queued','messages':[],'files':[]};POOL.submit(work,jid,rows,media,brand)
+   jid=secrets.token_hex(12);rows,media,brand=prepare_payload(body,ROOT/jid)
+   with LOCK:
+    if any(j['status'] in ['queued','running'] for j in JOBS.values()):raise ValueError('An audit is already running. Wait for it to finish.')
+    JOBS[jid]={'id':jid,'status':'queued','messages':[],'files':[]};save_job(jid);POOL.submit(work,jid,rows,media,brand)
    self.json_(202,{'id':jid})
   except (ValueError,TypeError,KeyError,StopIteration,zipfile.BadZipFile,OSError) as e:self.json_(400,{'error':str(e) or 'Invalid upload'})
 
 def main():
  global PORT
  parser=argparse.ArgumentParser(description=__doc__);args=parser.parse_args()
+ recover_jobs()
  server=ThreadingHTTPServer(('127.0.0.1',PORT),Handler)
  print(f'GBP Audit by Amrendar\nOpen http://127.0.0.1:{PORT}\nPairing code: {TOKEN}\nKeep this window open. Ctrl+C stops the runner. No extension or Google password required.',flush=True)
  try:server.serve_forever()

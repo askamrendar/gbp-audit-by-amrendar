@@ -36,7 +36,8 @@ class RunnerTests(unittest.TestCase):
    r=Presentation(p);self.assertEqual(len(r.slides),7);self.assertEqual(len(FORM),21);self.assertGreaterEqual(sum(x.has_table for s in r.slides for x in s.shapes),5)
  def test_job_to_download(self):
   with tempfile.TemporaryDirectory() as d,patch.object(runner,'ROOT',pathlib.Path(d)),patch.object(runner.audit,'run') as run:
-   def fake(rows,out,*a,**kw):out.mkdir(parents=True);(out/'audit-draft.pptx').write_bytes(b'test fixture')
+   def fake(rows,out,*a,**kw):
+    out.mkdir(parents=True,exist_ok=True);export_ppt({'input':rows[0],'started_at':'2026-10-22','profiles':[{'name':'Example Store','checks':[]}],'ranking':{}},out/'audit-draft.pptx')
    run.side_effect=fake
    response=json.load(self.request('/jobs',data={'consent':True,'rows':[{'store_code':'A','maps_url':'https://www.google.com/maps?cid=123','keyword':'shoe'}]}));jid=response['id']
    import time
@@ -44,7 +45,7 @@ class RunnerTests(unittest.TestCase):
     job=json.load(self.request('/jobs/'+jid))
     if job['status'] in ['completed','failed']:break
     time.sleep(.01)
-   self.assertEqual(job['status'],'completed');self.assertIn('audit-results.zip',job['files']);self.assertEqual(self.request('/jobs/'+jid+'/file/audit-draft.pptx').read(),b'test fixture')
+   self.assertEqual(job['status'],'completed');self.assertIn('audit-results.zip',job['files']);self.assertEqual(self.request('/jobs/'+jid+'/file/audit-draft.pptx').read()[:2],b'PK')
    with self.assertRaises(urllib.error.HTTPError):self.request('/jobs/'+jid+'/file/..%2FREADME.md')
  def test_invalid_logo_rejected(self):
   import base64
@@ -59,6 +60,15 @@ class RunnerTests(unittest.TestCase):
    result=json.load(self.request('/jobs',data={'consent':True,'rows':[{'store_code':'A','maps_url':'https://www.google.com/maps?cid=123','keyword':'shoe'}],'brand':{'agency':'Test Agency','accent':'#123456'},'logo':base64.b64encode(raw.getvalue()).decode()}))
    brand=submit.call_args.args[-1];self.assertEqual(brand['agency'],'Test Agency');self.assertTrue(pathlib.Path(brand['logo_path']).is_file());self.assertIn(result['id'],brand['logo_path'])
    runner.JOBS.pop(result['id'])
+
+ def test_saved_outputs_restored_after_restart(self):
+  with tempfile.TemporaryDirectory() as tmp,patch.object(runner,'ROOT',pathlib.Path(tmp)):
+   jid='a'*24;folder=pathlib.Path(tmp)/jid;(folder/'A').mkdir(parents=True);(folder/'A/audit.json').write_text(json.dumps({'input':{'store_code':'A','keyword':'shoe'},'started_at':'2026-10-22','profiles':[{'name':'Example','checks':[]}],'ranking':{}}))
+   runner.recover_jobs();self.assertIn(jid,runner.JOBS)
+   try:
+    response=json.load(self.request('/jobs/'+jid+'/export',data={}));self.assertEqual(response['status'],'completed');self.assertIn('A/audit-draft.pptx',response['files'])
+    data=self.request('/jobs/'+jid+'/file/A%2Faudit-draft.pptx');self.assertIn('attachment',data.headers['Content-Disposition']);self.assertEqual(data.read()[:2],b'PK')
+   finally:runner.JOBS.pop(jid,None)
 
 if __name__=='__main__':unittest.main()
 

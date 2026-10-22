@@ -134,7 +134,7 @@ def export_portfolio(audits,path):
   p=d['profiles'][0];code=d['input']['store_code'];name=p.get('name') or code;names=[(e.get('name') or 'Unresolved') for e in d['profiles']];names[0]+=' ('+code+')';conflicts=source_conflicts(d)
   s=slide(name+' ('+code+'): what we found',keyword+' · '+rank_state(d)['label']+' · '+d['started_at'][:10])
   tx(s,'Business profile',.6,1.55,3.25,.3,12,True);tx(s,'Keyword results',3.95,1.55,3.25,.3,12,True)
-  shot=(p.get('details_evidence') or {}).get('screenshot') or p.get('screenshot');fit_image(s,shot,.6,1.95,3.25,3.55);fit_image(s,d.get('ranking',{}).get('screenshot'),3.95,1.95,3.25,3.55)
+  shot=(p.get('details_evidence') or {}).get('screenshot') or p.get('screenshot') or (p.get('evidence') or {}).get('screenshot');fit_image(s,shot,.6,1.95,3.25,3.55);fit_image(s,d.get('ranking',{}).get('screenshot'),3.95,1.95,3.25,3.55)
   rows=[]
   for c in conflicts[:3]:rows.extend([[c['field']+' — GBP',c['observed']],[c['field']+' — supplied source',c['source_value']]])
   if not rows:
