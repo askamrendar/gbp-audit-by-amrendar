@@ -344,7 +344,7 @@ def run(rows,out,profile_dir,headless=False,executable=None,media_limit=10,chann
   elif channel!='chromium':args['channel']=channel
   # Use Playwright's bundled headless shell for hosted Chromium jobs, reducing
   # memory overhead while preserving normal multiprocess browser isolation.
-  if headless and channel=='chromium':args['args']=['--renderer-process-limit=2']
+  if headless and channel=='chromium':args['args']=['--renderer-process-limit=2','--disable-gpu','--disable-webgl','--js-flags=--max-old-space-size=160']
   context=pw.chromium.launch_persistent_context(**args)
   # No access to private/local network destinations; no profile mutation UI is invoked.
   def route(req):

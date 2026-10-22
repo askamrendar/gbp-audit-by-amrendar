@@ -11,6 +11,7 @@ ORIGINS={x.strip().rstrip('/') for x in os.environ.get('AUDIT_ALLOWED_ORIGINS','
 TTL=int(os.environ.get('AUDIT_RETENTION_HOURS','24'))*3600
 MAX_ROWS=int(os.environ.get('AUDIT_MAX_STORES','10'))
 EPHEMERAL=os.environ.get('AUDIT_STORAGE_EPHEMERAL','false').lower()=='true'
+MAX_MEDIA=0 if EPHEMERAL else 20
 JOBS={};LOCK=threading.RLock();POOL=concurrent.futures.ThreadPoolExecutor(max_workers=1)
 ATTEMPTS=defaultdict(deque);LOG=logging.getLogger('gbp.audit')
 
@@ -95,7 +96,7 @@ async def payload(request):
  except (ValueError,UnicodeError):raise HTTPException(400,'Invalid JSON request')
 
 @app.get('/api/health')
-def health():return {'name':'GBP Audit by Amrendar','version':'1.3','ready':True,'mode':'hosted','retention_hours':TTL//3600,'max_stores':MAX_ROWS,'ephemeral_storage':EPHEMERAL}
+def health():return {'name':'GBP Audit by Amrendar','version':'1.3','ready':True,'mode':'hosted','retention_hours':TTL//3600,'max_stores':MAX_ROWS,'ephemeral_storage':EPHEMERAL,'max_media':MAX_MEDIA,'build':os.environ.get('RENDER_GIT_COMMIT','local')[:12]}
 
 @app.post('/api/session')
 def session(request:Request):
@@ -135,7 +136,7 @@ async def create(request:Request):
   try:
    rows,media,brand=prepare_payload(body,ROOT/jid)
    if len(rows)>MAX_ROWS:raise ValueError(f'Hosted jobs allow up to {MAX_ROWS} stores at once')
-   if media>20:raise ValueError('Hosted media sample must be 0, 10 or 20 items per profile')
+   if media>MAX_MEDIA:raise ValueError('Gallery sampling is disabled on free hosting. Select 0 media items.' if MAX_MEDIA==0 else 'Hosted media sample must be at most 20 items per profile')
   except (ValueError,TypeError,KeyError,OSError,EOFError,zipfile.BadZipFile) as exc:
    shutil.rmtree(ROOT/jid,ignore_errors=True);raise HTTPException(400,str(exc))
   JOBS[jid]={'id':jid,'owner':who,'created_at':time.time(),'status':'queued','messages':['Audit queued. Collection and reports run in the background.'],'files':[]}
@@ -161,7 +162,7 @@ def download(request:Request,jid:str,name:str):
  return FileResponse(file,filename=file.name)
 
 @app.get('/config.js')
-def config():return Response('window.GBP_AUDIT_CONFIG = '+json.dumps({'apiBase':'/api','hosted':True,'maxStores':MAX_ROWS,'ephemeral':EPHEMERAL})+';',media_type='application/javascript')
+def config():return Response('window.GBP_AUDIT_CONFIG = '+json.dumps({'apiBase':'/api','hosted':True,'maxStores':MAX_ROWS,'ephemeral':EPHEMERAL,'maxMedia':MAX_MEDIA})+';',media_type='application/javascript')
 
 @app.get('/')
 def index():return FileResponse(pathlib.Path(__file__).parent/'docs/index.html')
